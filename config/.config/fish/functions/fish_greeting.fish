@@ -1,6 +1,8 @@
 function fish_greeting
     if not set -q fish_greeting
 	random choice "Hello!" "Hi" "G'day" "Howdy"
+        set -l line1 (_ 'Welcome to fish, the friendly interactive shell')
+        set -l line2 \n(printf (_ 'Type %shelp%s for instructions on how to use fish') (set_color green) (set_color normal))
         set -g fish_greeting "$choice $USER"
     end
 

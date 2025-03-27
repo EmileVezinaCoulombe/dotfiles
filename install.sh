@@ -13,6 +13,6 @@ pushd $DOTFILES
 for folder in $(echo $STOW_FOLDERS | sed "s/,/ /g")
 do
     echo "stow $folder"
-    stow --restow $folder
+    stow --adopt $folder
 done
 popd
