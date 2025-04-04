@@ -1,32 +1,165 @@
 return {
+    -- {
+    --     "nvim-neo-tree/neo-tree.nvim",
+    --     dependencies = {
+    --         "nvim-lua/plenary.nvim",
+    --         "nvim-tree/nvim-web-devicons",
+    --         "MunifTanjim/nui.nvim",
+    --     },
+    --     opts = {
+    --         window = {
+    --             mappings = {
+    --                 ["Z"] = "expand_all_nodes"
+    --             }
+    --         },
+    --         filesystem = {
+    --             filtered_items = {
+    --                 hide_dotfiles = false,
+    --                 hide_gitignored = false,
+    --                 hide_by_name = {
+    --                     "node_modules",
+    --                 },
+    --                 always_show = {
+    --                     ".gitignored",
+    --                 },
+    --             },
+    --         },
+    --     },
+    --     keys = {
+    --         {
+    --             "<leader>e",
+    --             "<cmd>Neotree toggle reveal position=right reveal_force_cwd<cr>",
+    --             desc = "Tree",
+    --         },
+    --     },
+    -- },
     {
-        "nvim-neo-tree/neo-tree.nvim",
-        dependencies = {
-            "nvim-lua/plenary.nvim",
-            "nvim-tree/nvim-web-devicons",
-            "MunifTanjim/nui.nvim",
+        "nvim-tree/nvim-tree.lua",
+        cmd = { "NvimTreeToggle", "NvimTreeFocus" },
+        keys = {
+            { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "nvimtree toggle window" },
+            { "<leader>E", "<cmd>NvimTreeFocus<CR>",  desc = "nvimtree focus window" }
         },
         opts = {
-            filesystem = {
-                filtered_items = {
-                    hide_dotfiles = false,
-                    hide_gitignored = false,
-                    hide_by_name = {
-                        "node_modules",
+            filters = { dotfiles = false, custom = { "^.git$" } },
+            disable_netrw = true,
+            hijack_cursor = true,
+            sync_root_with_cwd = true,
+            update_focused_file = {
+                enable = true,
+                update_root = false,
+            },
+            view = {
+                side = "right",
+                width = {
+                    min = 30,
+                    max = 200,
+                    padding = 1,
+                },
+                relativenumber = true,
+                preserve_window_proportions = false,
+            },
+            renderer = {
+                root_folder_label = false,
+                highlight_git = true,
+                indent_markers = { enable = true },
+                icons = {
+                    glyphs = {
+                        default = "󰈚",
+                        folder = {
+                            -- default = "",
+                            empty = "",
+                            empty_open = "",
+                            open = "",
+                            symlink = "",
+                        },
+                        git = {
+                            unstaged = "✗",
+                            staged = "✓",
+                            unmerged = "",
+                            renamed = "➜",
+                            untracked = "★",
+                            deleted = "",
+                            ignored = "◌",
+                        },
                     },
-                    always_show = {
-                        ".gitignored",
+
+                    show = {
+                        file = true,
+                        folder = true,
+                        folder_arrow = true,
+                        git = true,
+                        modified = true,
+                        hidden = false,
+                        diagnostics = true,
+                        bookmarks = true,
                     },
                 },
             },
-        },
-        keys = {
-            {
-                "<leader>e",
-                "<cmd>Neotree toggle reveal position=right reveal_force_cwd<cr>",
-                desc = "Tree",
+        }
+    },
+
+    {
+        "nvim-lualine/lualine.nvim",
+        opts = {
+            options = {
+                icons_enabled = true,
+                theme = 'auto',
+                component_separators = { left = '', right = '' },
+                section_separators = { left = '', right = '' },
+                disabled_filetypes = {
+                    statusline = {},
+                    winbar = {},
+                },
+                ignore_focus = {},
+                always_divide_middle = true,
+                always_show_tabline = true,
+                globalstatus = false,
+                refresh = {
+                    statusline = 100,
+                    tabline = 100,
+                    winbar = 100,
+                }
             },
+            sections = {
+                lualine_a = { 'mode' },
+                lualine_b = { 'branch', 'diff', 'diagnostics' },
+                lualine_c = { 'filename' },
+                lualine_x = {},
+                lualine_y = { 'progress' },
+                lualine_z = { 'location' }
+            },
+            inactive_sections = {
+                lualine_a = {},
+                lualine_b = {},
+                lualine_c = { 'filename' },
+                lualine_x = { 'location' },
+                lualine_y = {},
+                lualine_z = {}
+            },
+            tabline = {},
+            winbar = {},
+            inactive_winbar = {},
+            extensions = {}
         },
+    },
+    {
+        "nvim-lualine/lualine.nvim",
+        opts = function(_, opts)
+            -- local trouble = require("trouble")
+            -- local symbols = trouble.statusline({
+            --     mode = "lsp_document_symbols",
+            --     groups = {},
+            --     title = false,
+            --     filter = { range = true },
+            --     format = "{kind_icon}{symbol.name:Normal}",
+            --     hl_group = "lualine_c_normal",
+            -- })
+            -- table.insert(opts.sections.lualine_c, {
+            --     symbols.get,
+            --     cond = symbols.has,
+            -- })
+        end,
     },
     {
         "ThePrimeagen/vim-apm",
@@ -93,7 +226,7 @@ return {
         event = "BufEnter",
         opts = {},
         keys = {
-            { "<leader>p", "<cmd>PasteImage<cr>", desc = "Paste clipboard image" },
+            { "<leader>P", "<cmd>PasteImage<cr>", desc = "Paste clipboard image" },
         },
     },
     {
@@ -216,6 +349,11 @@ return {
         cmd = "Trouble",
         opts = {},
         keys = {
+            {
+                "<leader>xe",
+                "<cmd>Trouble diagnostics toggle filter = { severity=vim.diagnostic.severity.ERROR } <cr>",
+                desc = "Diagnostics Error (Trouble)",
+            },
             {
                 "<leader>xx",
                 "<cmd>Trouble diagnostics toggle<cr>",

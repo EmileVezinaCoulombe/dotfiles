@@ -1,0 +1,7 @@
+name: notes
+root: ~/OneDrive/vault
+
+windows:
+  - vault:
+      panes:
+        - nvim

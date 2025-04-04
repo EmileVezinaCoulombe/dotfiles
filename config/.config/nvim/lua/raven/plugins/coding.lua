@@ -40,50 +40,6 @@ return {
         "echasnovski/mini.ai",
         event = "VeryLazy",
         dependencies = { "nvim-treesitter-textobjects" },
-        opts = function()
-            local ai = require("mini.ai")
-            return {
-                n_lines = 500,
-                custom_textobjects = {
-                    o = ai.gen_spec.treesitter({
-                        a = {
-                            "@block.outer",
-                            "@conditional.outer",
-                            "@loop.outer",
-                        },
-                        i = {
-                            "@block.inner",
-                            "@conditional.inner",
-                            "@loop.inner",
-                        },
-                    }, {}),
-                    f = ai.gen_spec.treesitter({
-                        a = "@function.outer",
-                        i = "@function.inner",
-                    }, {}),
-                    c = ai.gen_spec.treesitter({
-                        a = "@class.outer",
-                        i = "@class.inner",
-                    }, {}),
-                },
-            }
-        end,
-        config = function(_, opts)
-            require("mini.ai").setup(opts)
-            -- register all text objects with which-key
-            ---@type table<string, string|table>
-            local i = {
-                [" "] = "Whitespace",
-                ["?"] = "User Prompt",
-                _ = "underscore",
-                a = "argument",
-                c = "class",
-                f = "function",
-                o = "block, conditional, loop",
-                q = "quote `, \", '",
-            }
-            require("which-key").register({ mode = { "o", "x" }, i = i, a = i })
-        end,
     },
     {
         "sindrets/diffview.nvim",
@@ -305,7 +261,7 @@ return {
     },
     {
         "mrcjkb/rustaceanvim",
-        version = "^4",
+        version = "^5",
         require = { "nvim-dap" },
         ft = { "rust" },
         opts = {
@@ -349,6 +305,14 @@ return {
             },
         },
         config = function(_, opts)
+
+            opts.dap = {
+                adapter =  require('rustaceanvim.config').get_codelldb_adapter(
+                    "/home/emile/.local/share/nvim/mason/packages/codelldb/extension/adapter/codelldb",
+                    "/home/emile/.local/share/nvim/mason/packages/codelldb/extension/lldb/bin/lldb"
+                ),
+            }
+
             vim.g.rustaceanvim = vim.tbl_deep_extend("keep", vim.g.rustaceanvim or {}, opts or {})
         end,
         keys = {

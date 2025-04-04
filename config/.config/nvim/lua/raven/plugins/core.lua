@@ -6,23 +6,29 @@ return {
     {
         "nvim-telescope/telescope.nvim",
         dependencies = {
+            { "nvim-telescope/telescope-ui-select.nvim" },
             { "nvim-lua/plenary.nvim" },
         },
         opts = {
             defaults = {
                 prompt_prefix = require("raven.core").icons.telescope.prompt_prefix,
                 selection_caret = require("raven.core").icons.telescope.selection_caret,
-                file_ignore_patterns = { ".git/**/*" },
+                file_ignore_patterns = { ".git/**/*", "node_modules/**/*" },
             },
             extension = {
                 media_files = {
                     filetypes = { "png", "webp", "jpg", "jpeg", "mp4", "webm", "pdf" },
                     find_cmd = "rg",
                 },
+                ["ui-select"] = {
+                    require("telescope.themes").get_dropdown {
+                    }
+                }
             },
         },
         config = function(_, opts)
             require("telescope").setup({ opts })
+            require("telescope").load_extension("ui-select")
         end,
         keys = {
             {
@@ -82,8 +88,9 @@ return {
                 function()
                     require("telescope.builtin").live_grep({
                         hidden = true,
+                        no_ignore = true,
                         additional_args = { "-j1" },
-                        glob_pattern = { "**/*", "!.git", "!**/*.png", "!**/*.jpeg", "!**/*.jpg", "!**/*.pdf" },
+                        glob_pattern = { "!.git", "!target", "!node_modules", "!**/*.png", "!**/*.jpeg", "!**/*.jpg", "!**/*.pdf" },
                     })
                 end,
                 desc = "Grep",
@@ -93,9 +100,9 @@ return {
                 function()
                     require("telescope.builtin").live_grep({
                         hidden = true,
-                        no_ignore = true,
+
                         additional_args = { "-j1" },
-                        glob_pattern = { "!.git", "!**/*.png", "!**/*.jpeg", "!**/*.jpg", "!**/*.pdf" },
+                        glob_pattern = { "**/*", "!.git", "!target", "!node_modules", "!**/*.png", "!**/*.jpeg", "!**/*.jpg", "!**/*.pdf" },
                     })
                 end,
                 desc = "Grep more",

@@ -161,5 +161,6 @@
   ],
   "git.confirmSync": false,
   "terminal.integrated.shellIntegration.enabled": false,
-  "jupyter.askForKernelRestart": false
+  "jupyter.askForKernelRestart": false,
+  "workbench.editor.tabActionLocation": "right"
 }

@@ -79,6 +79,9 @@ eval "$(starship init zsh)"
 ################################################################################
 # Apps
 
+# Fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
 # Neovim
 export PATH="$HOME/neovim/bin:$PATH"
 

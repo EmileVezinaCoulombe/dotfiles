@@ -22,15 +22,19 @@ return {
                 adapters = {
                     require("rustaceanvim.neotest")({}),
                     ["neotest-python"] = {
-                        -- Here you can specify the settings for the adapter, i.e.
-                        -- runner = "pytest",
-                        -- python = ".venv/bin/python",
-
                         dap = { justMyCode = false },
                         runner = "unittest",
-                        -- TODO: use venv plugin
-                        python = require("raven.utils").venv_python_path,
+                        python = function()
+                            local path = require("raven.utils").venv_python_path()
+                            if not path then
+                                vim.notify("No valid Python venv found", vim.log.levels.WARN)
+                            end
+                            return path
+                        end,
+
                     },
+
+
                 },
                 status = { virtual_text = true },
                 output = { open_on_run = true },
@@ -124,8 +128,7 @@ return {
                     },
                 },
                 config = function()
-                    local path = require("mason-registry").get_package("debugpy"):get_install_path()
-                    require("dap-python").setup(path .. "/venv/bin/python")
+                    require("dap-python").setup(require("raven.utils").venv_python_path())
                 end,
             },
             { "theHamsta/nvim-dap-virtual-text", opts = {} },
@@ -188,20 +191,76 @@ return {
                 },
             },
         },
-        -- config = function()
-        --     local dap = require('dap')
-        --     -- Configure Java DAP
-        --     dap.configurations.java = {
-        --         {
-        --             type = 'java',
-        --             request = 'launch',
-        --             name = "Launch Java Program",
-        --             mainClass = "${file}",
-        --             projectName = "${workspaceFolder}",
-        --             vmArgs = "",
-        --         }
-        --     }
-        -- end,
+        config = function()
+            local dap = require('dap')
+            dap.defaults.fallback.pythonPath = require("raven.utils").venv_python_path()
+
+            dap.adapters.lldb = {
+                type = "executable",
+                command = "/home/emile/.local/share/nvim/mason/packages/codelldb/codelldb",
+                name = "codelldb",
+            }
+
+            dap.configurations.python = {
+                {
+                    type = 'python',
+                    request = 'launch',
+                    name = 'Launch file',
+                    program = "${file}",
+                    pythonPath = require("raven.utils").venv_python_path()
+                },
+                {
+                    type = 'python',
+                    request = 'launch',
+                    name = 'Launch main',
+                    program = "main.py",
+                    pythonPath = require("raven.utils").venv_python_path()
+                },
+            }
+            dap.configurations.rust = {
+                {
+                    name = "zilia",
+                    type = "lldb",
+                    request = "launch",
+                    program = function()
+                        return vim.fn.getcwd() .. "/target/dx/zilia-dashboard/debug/linux/app/zilia-dashboard"
+                    end,
+                    cwd = "${workspaceFolder}",
+                    stopOnEntry = false,
+                }
+            }
+            dap.configurations.java = {
+                {
+                    name = "Debug Launch",
+                    type = 'java',
+                    request = 'launch',
+                    vmArgs = "" .. "-Xmx2g",
+                    mainClass = "${file}",
+                    projectName = "${workspaceFolder}",
+                },
+                {
+                    name = "Debug Attach (8000)",
+                    type = "java",
+                    request = "attach",
+                    hostName = "127.0.0.1",
+                    port = 5005,
+                },
+                {
+                    name      = "QM Java Runner",
+                    type      = "java",
+                    request   = "launch",
+                    mainClass = "ca.ulaval.glo4002.application.ApplicationServer",
+                    vmArgs    = "" .. "-Xmx2g"
+                },
+                {
+                    name      = "ARCHI Java Runner",
+                    type      = "java",
+                    request   = "launch",
+                    mainClass = "ca.ulaval.glo4003.Main",
+                    vmArgs    = "" .. "-Xmx2g"
+                }
+            }
+        end,
         keys = {
             {
                 "<leader>dB",
@@ -267,14 +326,14 @@ return {
                 desc = "Run Last",
             },
             {
-                "<leader>do",
+                "<leader>dO",
                 function()
                     require("dap").step_out()
                 end,
                 desc = "Step Out",
             },
             {
-                "<leader>dO",
+                "<leader>do",
                 function()
                     require("dap").step_over()
                 end,

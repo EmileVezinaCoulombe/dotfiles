@@ -1,0 +1,19 @@
+name: config
+root: ~/.config
+
+windows:
+  - tmux:
+      panes:
+        - cd tmux && nvim tmux.conf
+  - nvim:
+      panes:
+        - cd nvim && nvim
+  - aliases:
+      panes:
+        - cd zsh && nvim zsh-aliases
+  - tmuxinator:
+      panes:
+        - cd tmuxinator && nvim
+  - run:
+      panes:
+        - cd ~

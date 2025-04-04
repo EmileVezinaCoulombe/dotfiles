@@ -69,15 +69,14 @@ end
 ---@return string?
 function M.venv_python_path()
     local venv_path = vim.fn.glob(require("raven.utils").get_root() .. "/venv/")
+    local python_path = M.is_unix and venv_path .. "bin/python" or venv_path .. "Scripts\\python.exe"
 
-    if venv_path == "" then
-        Util.warn("Missing venv path", { title = "Missing install" })
-    elseif M.is_unix then
-        return venv_path .. "bin/python"
+    if vim.fn.executable(python_path) == 1 then
+        return python_path
     else
-        return venv_path .. "Scripts\\python.exe"
+        -- Util.warn("Python executable not found in venv", { title = "Invalid venv" })
+        return nil
     end
-    return nil
 end
 
 return M

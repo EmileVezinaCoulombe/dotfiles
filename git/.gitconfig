@@ -27,7 +27,7 @@
 
 [merge]
     tool = nvim
-    conflictstyle = diff3
+    conflictstyle = merge
 
 [color]
     ui = true

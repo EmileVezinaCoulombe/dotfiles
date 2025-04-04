@@ -11,7 +11,27 @@ return {
             },
         },
     },
-    { "Bilal2453/luvit-meta", lazy = true },
+    { "Bilal2453/luvit-meta",               lazy = true },
+    {
+        "Wansmer/symbol-usage.nvim",
+        event = 'LspAttach',
+        config = function()
+            local SymbolKind = vim.lsp.protocol.SymbolKind
+            require('symbol-usage').setup({
+                ---@type lsp.SymbolKind[] Symbol kinds what need to be count (see `lsp.SymbolKind`)
+                kinds = { SymbolKind.Function, SymbolKind.Method },
+                ---@type 'above'|'end_of_line'|'textwidth'|'signcolumn' `above` by default
+                vt_position = 'end_of_line',
+            })
+        end,
+        keys = { {
+            "<leader>uu",
+            function()
+                require('symbol-usage').toggle_globally()
+            end,
+            desc = "Toggle Usages"
+        } },
+    },
     {
         "hrsh7th/nvim-cmp",
         version = false, -- last release is way too old
@@ -91,6 +111,7 @@ return {
         "j-hui/fidget.nvim",
         opts = {},
     },
+    { "artemave/workspace-diagnostics.nvim" },
     {
         "neovim/nvim-lspconfig",
         cmd = { "LspInfo", "LspInstall", "LspStart" },
@@ -145,7 +166,7 @@ return {
                             mode,
                             lhs,
                             rhs,
-                            vim.tbl_extend("force", { buffer = bufnr, remap = false }, k_opts)
+                            vim.tbl_extend("force", { buffer = event.buf, remap = false }, k_opts)
                         )
                     end
 
@@ -177,6 +198,18 @@ return {
                     map("n", "<leader>ca", function()
                         vim.lsp.buf.code_action()
                     end, { desc = "Code action" })
+                    map('v', '<leader>ca', function()
+                        vim.lsp.buf.code_action({
+                            -- This will pass the current visual selection range to LSP
+                            range = {
+                                ["start"] = vim.api.nvim_buf_get_mark(0, "<"),
+                                ["end"] = vim.api.nvim_buf_get_mark(0, ">"),
+                            }
+                        })
+                    end, {
+                        desc = 'Code Action'
+                    })
+
                     map("n", "gr", function()
                         require("telescope.builtin").lsp_references({ reuse_win = true })
                         -- vim.lsp.buf.references({})
@@ -343,6 +376,9 @@ return {
         "williamboman/mason-lspconfig.nvim",
     },
     {
+        "WhoIsSethDaniel/mason-tool-installer.nvim",
+    },
+    {
         "williamboman/mason.nvim",
         cmd = "Mason",
         keys = { { "<leader>cm", "<cmd>Mason<cr>", desc = "Mason" } },
@@ -359,6 +395,14 @@ return {
             })
 
             require("mason").setup(conf)
+
+            -- require("mason-tool-installer").setup({
+            --     -- ensure_installed = {
+            --     --     "java-debug-adapter",
+            --     --     "java-test",
+            --     --     "codelldb",
+            --     -- }
+            -- })
 
             local cmp_lsp = require("cmp_nvim_lsp")
             local capabilities = vim.tbl_deep_extend(
@@ -380,13 +424,13 @@ return {
                     "luacheck",
                     "shellcheck",
                     "rustfmt",
-                    "ruff",
                     "autoflake",
                     "prettierd",
                     "sql_formatter",
                 },
             })
             require("mason-lspconfig").setup({
+                automatic_installation = true,
                 ensure_installed = {
                     -- https://github.com/williamboman/mason-lspconfig.nvim/blob/main/doc/server-mapping.md
                     "bashls",
@@ -396,55 +440,35 @@ return {
                     -- "biome",
                     "angularls",
                     "jsonls",
+                    "jdtls",
                     "lua_ls",
                     "powershell_es",
-                    "pylsp",
                     "ruff",
+                    -- "pylsp",
+                    "basedpyright",
                     "sqlls",
                     "tailwindcss",
                     "ts_ls",
-                    "typst_lsp",
+                    "tinymist",
                     "yamlls",
+                    "openscad_lsp",
                 },
                 handlers = {
                     function(server_name) -- default handler (optional)
-                        require("lspconfig")[server_name].setup({
-                            capabilities = capabilities,
-                        })
+                        if server_name ~= "jdtls" then
+                            require("lspconfig")[server_name].setup({
+                                capabilities = capabilities,
+                            })
+                        end
                     end,
 
-                    rust_analyzer = function()
-                        require("lspconfig").rust_analyzer.setup({
-                            cargo = {
-                                allFeatures = true,
-                                loadOutDirsFromCheck = true,
-                                buildScripts = {
-                                    enable = true,
-                                },
-                            },
-                            checkOnSave = {
-                                allFeatures = true,
-                                command = "clippy",
-                                extraArgs = { "--no-deps" },
-                            },
-                            procMacro = {
-                                enable = true,
-                                ignored = {
-                                    ["async-trait"] = { "async_trait" },
-                                    ["napi-derive"] = { "napi" },
-                                    ["async-recursion"] = { "async_recursion" },
-                                    leptos_macro = {
-                                        "component",
-                                        "server",
-                                    },
-                                },
-                            },
-                        })
-                    end,
                     angularls = function()
                         require("lspconfig").angularls.setup({
                             capabilities = capabilities,
                             settings = {},
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                            end,
                         })
                     end,
                     sqlls = function()
@@ -454,6 +478,9 @@ return {
                         require("lspconfig").lua_ls.setup({
                             capabilities = capabilities,
                             settings = {},
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                            end,
                         })
                     end,
                     bashls = function()
@@ -467,20 +494,101 @@ return {
                     jsonls = function()
                         require("lspconfig").jsonls.setup(require("raven.plugins.lsp-opts.jsonls"))
                     end,
-                    -- pylsp = function()
-                    --     require("lspconfig").pylsp.setup(require("raven.plugins.lsp-opts.pylsp"))
-                    -- end,
-
                     -- biome = function()
                     --     require("lspconfig").biome.setup({
                     --         capabilities = capabilities,
                     --         settings = {},
                     --     })
                     -- end,
+                    -- pylsp = function()
+                    --     require("lspconfig").pylsp.setup({
+                    --         capabilities = capabilities,
+                    --         settings = {
+                    --             pylsp = {
+                    --                 plugins = {
+                    --                     -- Disable other linters/formatters as I use ruff for these
+                    --                     pycodestyle = { enabled = false },
+                    --                     mccabe = { enabled = false },
+                    --                     pyflakes = { enabled = false },
+                    --                     flake8 = { enabled = false },
+                    --                     autopep8 = { enabled = false },
+                    --                     yapf = { enabled = false },
+                    --
+                    --                     -- Enable rope
+                    --                     rope_completion = { enabled = false },
+                    --                     rope_autoimport = { enabled = false },
+                    --                     rope = {
+                    --                         enabled = false,
+                    --                         -- extract_method = { enabled = true },
+                    --                         -- extract_variable = { enabled = true },
+                    --                         -- inline = { enabled = true },
+                    --                         -- move = { enabled = true },
+                    --                     },
+                    --
+                    --                     -- Enable Jedi
+                    --                     jedi_completion = { enabled = true },
+                    --                     jedi_hover = { enabled = true },
+                    --                     jedi_references = { enabled = true },
+                    --                     jedi_signature_help = { enabled = true },
+                    --                     jedi_symbols = { enabled = true },
+                    --                 }
+                    --             }
+                    --
+                    --         },
+                    --         on_init = function(client)
+                    --             client.server_capabilities.documentFormattingProvider = false
+                    --             client.server_capabilities.documentFormattingRangeProvider = false
+                    --         end,
+                    --     })
+                    -- end,
+                    basedpyright = function()
+                        require("lspconfig").basedpyright.setup({
+                            capabilities = capabilities,
+                            settings = {},
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                            end,
+                        })
+                    end,
+                    pylyzer = function()
+                        require("lspconfig").pylyzer.setup({
+                            cmd = { "pylyzer", "--server" },
+                            capabilities = capabilities,
+                            settings = {}
+                        })
+                    end,
                     ruff = function()
                         require("lspconfig").ruff.setup({
                             capabilities = capabilities,
-                            settings = {},
+                            settings = {
+                                ruff = {
+                                    lint = {
+                                        enable = true,
+                                    },
+                                    organizeImports = true,
+                                    fixAll = true,
+                                }
+                            },
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                                local function format_and_organize()
+                                    -- local params = {
+                                    --     command = "ruff.applyOrganizeImports",
+                                    --     arguments = {
+                                    --         {
+                                    --             uri = vim.uri_from_bufnr(0),
+                                    --             version = vim.b[bufnr].changedtick,
+                                    --         }
+                                    --     }
+                                    -- }
+                                    -- vim.lsp.buf.execute_command(params)
+                                    vim.lsp.buf.format({ async = false, timeout_ms = 100 })
+                                end
+                                vim.keymap.set('n', '<leader>cf', format_and_organize, {
+                                    buffer = bufnr,
+                                    desc = 'Format'
+                                })
+                            end
                         })
                     end,
                     tailwindcss = function()
@@ -515,6 +623,9 @@ return {
                                 client.server_capabilities.documentFormattingProvider = false
                                 client.server_capabilities.documentFormattingRangeProvider = false
                             end,
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                            end,
                         })
                     end,
                     eslint = function()
@@ -533,19 +644,15 @@ return {
                             end,
                         })
                     end,
-                    typst_lsp = function()
+                    tinymist = function()
                         vim.filetype.add({ extension = { typ = "typst" } })
-
-                        local root_dir = require("raven.utils").get_root()
-                        local nvim_lsp = require("lspconfig")
-                        nvim_lsp.typst_lsp.setup({
-                            settings = {
-                                exportPdf = "onSave",
-                                serverPath = root_dir,
-                            },
-                            filetypes = { "typst", "typ" },
-                            root_dir = nvim_lsp.util.root_pattern("main.typ", ".git", ".wakatime*"),
-                            single_file_support = false,
+                        require("lspconfig").tinymist.setup({
+                            capabilities = capabilities,
+                            offset_encoding = "utf-8",
+                            settings = {},
+                            on_attach = function(client, bufnr)
+                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                            end,
                         })
                     end,
                 },
@@ -554,407 +661,40 @@ return {
     },
     {
         "mfussenegger/nvim-jdtls",
-        dependencies = { "folke/which-key.nvim", "mfussenegger/nvim-dap" },
+        dependencies = {
+            { "mfussenegger/nvim-dap" },
+            { "folke/which-key.nvim" },
+        },
         ft = { "java" },
-        opts = function()
-            local mason_registry = require("mason-registry")
-            local lombok_jar = mason_registry.get_package("jdtls"):get_install_path() .. "/lombok.jar"
-
-            local root_markers = { ".git", "mvnw", "gradlew", "pom.xml", "build.gradle" }
-            local find_root_dir = require("lspconfig").util.root_pattern(unpack(root_markers))
-
-            return {
-                root_dir = function(fname)
-                    return find_root_dir(fname)
+        keys = {
+            { "<leader>cC",  function() require("jdtls").compile() end,                         desc = "Compile" },
+            { "<leader>cx",  desc = "+extract" },
+            { "<leader>cxv", function() require("jdtls").extract_variable_all() end,            desc = "Extract Variable" },
+            { "<leader>cxc", function() require("jdtls").extract_constant() end,                desc = "Extract Constant" },
+            { "gs",          function() require("jdtls").super_implementation() end,            desc = "Goto Super" },
+            { "gS",          function() require("jdtls.tests").goto_subjects() end,             desc = "Goto Subjects" },
+            { "<leader>co",  function() require("jdtls").organize_imports() end,                desc = "Organize Imports" },
+            -- Visual mode mappings
+            { "<leader>cxm", [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]],       desc = "Extract Method",   mode = "v" },
+            { "<leader>cxv", [[<ESC><CMD>lua require('jdtls').extract_variable_all(true)<CR>]], desc = "Extract Variable", mode = "v" },
+            { "<leader>cxc", [[<ESC><CMD>lua require('jdtls').extract_constant(true)<CR>]],     desc = "Extract Constant", mode = "v" },
+            -- Test mappings
+            { "<leader>t",   desc = "+test" },
+            {
+                "<leader>tt",
+                function()
+                    require("jdtls.dap").test_class()
                 end,
-
-                -- -- How to find the root dir for a given filename. The default comes from
-                -- project_name = function(root_dir)
-                --     return root_dir and vim.fs.basename(root_dir)
-                -- end,
-                --
-                -- -- Where are the config and workspace dirs for a project?
-                -- jdtls_config_dir = function(project_name)
-                --     return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/config"
-                -- end,
-                -- jdtls_workspace_dir = function(project_name)
-                --     return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/workspace"
-                -- end,
-                -- How to run jdtls. This can be overridden to a full java command-line
-                -- if the Python wrapper script doesn't suffice.
-                cmd = {
-                    vim.fn.expand("~/.local/share/nvim/mason/bin/jdtls"),
-                },
-                --       {
-                --     vim.fn.exepath("jdtls"),
-                --     string.format("--jvm-arg=-javaagent:%s", lombok_jar),
-                -- },
-                -- full_cmd = function(opts)
-                --     local fname = vim.api.nvim_buf_get_name(0)
-                --     local root_dir = opts.root_dir(fname)
-                --     local project_name = opts.project_name(root_dir)
-                --     local cmd = vim.deepcopy(opts.cmd)
-                --     if project_name then
-                --         vim.list_extend(cmd, {
-                --             "-configuration",
-                --             opts.jdtls_config_dir(project_name),
-                --             "-data",
-                --             opts.jdtls_workspace_dir(project_name),
-                --         })
-                --     end
-                --     return cmd
-                -- end,
-
-                -- These depend on nvim-dap, but can additionally be disabled by setting false here.
-                -- dap = { hotcodereplace = "auto", config_overrides = {} },
-                -- dap_main = {},
-                -- test = true,
-                settings = {
-                    java = {
-                        format = {
-                            enabled = false,
-                        },
-                        saveActions = {
-                            organizeImports = false,
-                        },
-                        inlayHints = {
-                            parameterNames = {
-                                enabled = "all",
-                            },
-                        },
-                        configuration = {
-                            updateBuildConfiguration = "automatic",
-                            runtimes = {
-                                {
-                                    name = "JavaSE-21",
-                                    path = "/home/emile/.sdkman/candidates/java/current",
-                                    default = true,
-                                },
-                            },
-                        },
-                        init_options = {
-                            bundles = {},
-                            extendedClientCapabilities = {
-                                progressReportProvider = false
-                            }
-                        },
-                        flags = {
-                            allow_incremental_sync = true,
-                        },
-                    },
-                },
-                -- on_attach = function(client, bufnr)
-                --     -- Clear any existing formatting autocmds for this buffer
-                --     vim.api.nvim_clear_autocmds({
-                --         group = vim.api.nvim_create_augroup("LspFormatting", { clear = true }),
-                --         buffer = bufnr
-                --     })
-                --
-                --     -- Disable the formatting provider
-                --     client.server_capabilities.documentFormattingProvider = false
-                --     client.server_capabilities.documentRangeFormattingProvider = false
-                --
-                --     -- Add an empty autocmd to prevent other formatting autocmds
-                --     vim.api.nvim_create_autocmd("BufWritePre", {
-                --         group = vim.api.nvim_create_augroup("LspFormatting", { clear = false }),
-                --         buffer = bufnr,
-                --         callback = function()
-                --             -- Do nothing on save
-                --         end,
-                --     })
-                -- end
-            }
-        end,
-        config = function(_, opts)
-            -- vim.api.nvim_create_autocmd("FileType", {
-            --     pattern = "java",
-            --     callback = function()
-            --         -- Disable autosave for Java files
-            --         vim.b.auto_save = false
-            --     end
-            -- })
-            vim.api.nvim_create_autocmd("FileType", {
-                pattern = "java",
-                callback = function()
-                    vim.b.format_on_save = false -- Disable format on save
+                desc = "Run All Test"
+            },
+            {
+                "<leader>tr",
+                function()
+                    require("jdtls.dap").test_nearest_method()
                 end,
-            })
-            vim.api.nvim_create_autocmd("BufWritePre", {
-                pattern = "*.java",
-                callback = function()
-                    -- Add a small delay before formatting
-                    vim.defer_fn(function()
-                        vim.lsp.buf.format({ async = false })
-                    end, 100)
-                end,
-            })
-            local function attach_jdtls()
-                require("jdtls").start_or_attach(opts)
-            end
-
-            attach_jdtls()
-        end,
+                desc = "Run Nearest Test"
+            },
+            { "<leader>tT", function() require("jdtls.dap").pick_test() end, desc = "Run Test" },
+        },
     },
-    -- {
-    --     "mfussenegger/nvim-jdtls",
-    --     dependencies = { "folke/which-key.nvim", "mfussenegger/nvim-dap" },
-    --     ft = { "java" },
-    --     opts = function()
-    --         local mason_registry = require("mason-registry")
-    --         local lombok_jar = mason_registry.get_package("jdtls"):get_install_path() .. "/lombok.jar"
-    --
-    --         local root_markers = { ".git", "mvnw", "gradlew", "pom.xml", "build.gradle" }
-    --         local find_root_dir = require("lspconfig").util.root_pattern(unpack(root_markers))
-    --
-    --         return {
-    --             root_dir = function(fname)
-    --                 return find_root_dir(fname)
-    --             end,
-    --
-    --             -- How to find the root dir for a given filename. The default comes from
-    --             project_name = function(root_dir)
-    --                 return root_dir and vim.fs.basename(root_dir)
-    --             end,
-    --
-    --             -- Where are the config and workspace dirs for a project?
-    --             jdtls_config_dir = function(project_name)
-    --                 return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/config"
-    --             end,
-    --             jdtls_workspace_dir = function(project_name)
-    --                 return vim.fn.stdpath("cache") .. "/jdtls/" .. project_name .. "/workspace"
-    --             end,
-    --             -- How to run jdtls. This can be overridden to a full java command-line
-    --             -- if the Python wrapper script doesn't suffice.
-    --             cmd = {
-    --                 vim.fn.exepath("jdtls"),
-    --                 string.format("--jvm-arg=-javaagent:%s", lombok_jar),
-    --             },
-    --             full_cmd = function(opts)
-    --                 local fname = vim.api.nvim_buf_get_name(0)
-    --                 local root_dir = opts.root_dir(fname)
-    --                 local project_name = opts.project_name(root_dir)
-    --                 local cmd = vim.deepcopy(opts.cmd)
-    --                 if project_name then
-    --                     vim.list_extend(cmd, {
-    --                         "-configuration",
-    --                         opts.jdtls_config_dir(project_name),
-    --                         "-data",
-    --                         opts.jdtls_workspace_dir(project_name),
-    --                     })
-    --                 end
-    --                 return cmd
-    --             end,
-    --
-    --             -- These depend on nvim-dap, but can additionally be disabled by setting false here.
-    --             dap = { hotcodereplace = "auto", config_overrides = {} },
-    --             dap_main = {},
-    --             test = true,
-    --             settings = {
-    --                 java = {
-    --                     format = {
-    --                         enabled = false,
-    --                     },
-    --                     saveActions = {
-    --                         organizeImports = false,
-    --                     },
-    --                     inlayHints = {
-    --                         parameterNames = {
-    --                             enabled = "all",
-    --                         },
-    --                     },
-    --                     configuration = {
-    --                         updateBuildConfiguration = "automatic",
-    --                         runtimes = {
-    --                             {
-    --                                 name = "JavaSE-21",
-    --                                 path = "/home/emile/.sdkman/candidates/java/current",
-    --                                 default = true,
-    --                             },
-    --                         },
-    --                     },
-    --                 },
-    --             },
-    --             on_init = function(client)
-    --                 client.server_capabilities.documentFormattingProvider = false
-    --                 client.server_capabilities.documentRangeFormattingProvider = false
-    --             end,
-    --         }
-    --     end,
-    --     config = function(_, opts)
-    --         -- Find the extra bundles that should be passed on the jdtls command-line
-    --         -- if nvim-dap is enabled with java debug/test.
-    --         local mason_registry = require("mason-registry")
-    --         local bundles = {} ---@type string[]
-    --         if opts.dap and mason_registry.is_installed("java-debug-adapter") then
-    --             local java_dbg_pkg = mason_registry.get_package("java-debug-adapter")
-    --             local java_dbg_path = java_dbg_pkg:get_install_path()
-    --             local jar_patterns = {
-    --                 java_dbg_path .. "/extension/server/com.microsoft.java.debug.plugin-*.jar",
-    --             }
-    --             -- java-test also depends on java-debug-adapter.
-    --             if opts.test and mason_registry.is_installed("java-test") then
-    --                 local java_test_pkg = mason_registry.get_package("java-test")
-    --                 local java_test_path = java_test_pkg:get_install_path()
-    --                 vim.list_extend(jar_patterns, {
-    --                     java_test_path .. "/extension/server/*.jar",
-    --                 })
-    --             end
-    --             for _, jar_pattern in ipairs(jar_patterns) do
-    --                 for _, bundle in ipairs(vim.split(vim.fn.glob(jar_pattern), "\n")) do
-    --                     table.insert(bundles, bundle)
-    --                 end
-    --             end
-    --         end
-    --
-    --         local function attach_jdtls()
-    --             local fname = vim.api.nvim_buf_get_name(0)
-    --
-    --             -- Configuration can be augmented and overridden by opts.jdtls
-    --             local config = vim.tbl_deep_extend("force", {
-    --                 cmd = opts.full_cmd(opts),
-    --                 root_dir = opts.root_dir(fname),
-    --                 init_options = {
-    --                     bundles = bundles,
-    --                 },
-    --                 settings = opts.settings,
-    --                 capabilities = require("cmp_nvim_lsp").default_capabilities(),
-    --                 on_init = function(client)
-    --                     client.server_capabilities.documentFormattingProvider = false
-    --                     client.server_capabilities.documentRangeFormattingProvider = false
-    --                 end,
-    --                 on_attach = function(client, bufnr)
-    --                     -- Disable formatting from one source
-    --                     client.server_capabilities.documentFormattingProvider = false
-    --                     -- Or explicitly set which one you want to use
-    --                     vim.bo[bufnr].formatprg = "jdtls" -- or whatever formatter you prefer
-    --                 end,
-    --             }, {})
-    --
-    --             -- Existing server will be reused if the root_dir matches.
-    --             require("jdtls").start_or_attach(config)
-    --             -- not need to require("jdtls.setup").add_commands(), start automatically adds commands
-    --         end
-    --
-    --         -- Attach the jdtls for each java buffer. HOWEVER, this plugin loads
-    --         -- depending on filetype, so this autocmd doesn't run for the first file.
-    --         -- For that, we call directly below.
-    --         --
-    --         vim.api.nvim_create_autocmd("BufWritePre", {
-    --             pattern = "*.java",
-    --             callback = function()
-    --                 print("Formatter used:", vim.bo.formatprg)
-    --                 print("Format options:", vim.inspect(vim.b.format_options))
-    --             end,
-    --         })
-    --         vim.api.nvim_create_autocmd("FileType", {
-    --             pattern = "java",
-    --             callback = function()
-    --                 vim.b.autoformat = false
-    --             end,
-    --         })
-    --         vim.api.nvim_create_autocmd("FileType", {
-    --             pattern = "java",
-    --             callback = attach_jdtls,
-    --         })
-    --
-    --         -- Setup keymap and dap after the lsp is fully attached.
-    --         -- https://github.com/mfussenegger/nvim-jdtls#nvim-dap-configuration
-    --         -- https://neovim.io/doc/user/lsp.html#LspAttach
-    --         vim.api.nvim_create_autocmd("LspAttach", {
-    --             callback = function(args)
-    --                 local client = vim.lsp.get_client_by_id(args.data.client_id)
-    --                 if client and client.name == "jdtls" then
-    --                     local wk = require("which-key")
-    --                     wk.add({
-    --                         {
-    --                             mode = "n",
-    --                             buffer = args.buf,
-    --                             { "<leader>cx", group = "extract" },
-    --                             { "<leader>cxv", require("jdtls").extract_variable_all, desc = "Extract Variable" },
-    --                             { "<leader>cxc", require("jdtls").extract_constant, desc = "Extract Constant" },
-    --                             { "gs", require("jdtls").super_implementation, desc = "Goto Super" },
-    --                             { "gS", require("jdtls.tests").goto_subjects, desc = "Goto Subjects" },
-    --                             { "<leader>co", require("jdtls").organize_imports, desc = "Organize Imports" },
-    --                         },
-    --                     })
-    --                     wk.add({
-    --                         {
-    --                             mode = "v",
-    --                             buffer = args.buf,
-    --                             { "<leader>cx", group = "extract" },
-    --                             {
-    --                                 "<leader>cxm",
-    --                                 [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]],
-    --                                 desc = "Extract Method",
-    --                             },
-    --                             {
-    --                                 "<leader>cxv",
-    --                                 [[<ESC><CMD>lua require('jdtls').extract_variable_all(true)<CR>]],
-    --                                 desc = "Extract Variable",
-    --                             },
-    --                             {
-    --                                 "<leader>cxc",
-    --                                 [[<ESC><CMD>lua require('jdtls').extract_constant(true)<CR>]],
-    --                                 desc = "Extract Constant",
-    --                             },
-    --                         },
-    --                     })
-    --
-    --                     if opts.dap and mason_registry.is_installed("java-debug-adapter") then
-    --                         -- custom init for Java debugger
-    --                         vim.defer_fn(function()
-    --                             require("jdtls").setup_dap(opts.dap)
-    --                             if opts.dap_main then
-    --                                 require("jdtls.dap").setup_dap_main_class_configs(opts.dap_main)
-    --                             end
-    --                         end, 1000)
-    --
-    --                         -- Java Test require Java debugger to work
-    --                         if opts.test and mason_registry.is_installed("java-test") then
-    --                             -- custom keymaps for Java test runner (not yet compatible with neotest)
-    --                             wk.add({
-    --                                 {
-    --                                     mode = "n",
-    --                                     buffer = args.buf,
-    --                                     { "<leader>t", group = "test" },
-    --                                     {
-    --                                         "<leader>tt",
-    --                                         function()
-    --                                             require("jdtls.dap").test_class({
-    --                                                 config_overrides = type(opts.test) ~= "boolean"
-    --                                                         and opts.test.config_overrides
-    --                                                     or nil,
-    --                                             })
-    --                                         end,
-    --                                         desc = "Run All Test",
-    --                                     },
-    --                                     {
-    --                                         "<leader>tr",
-    --                                         function()
-    --                                             require("jdtls.dap").test_nearest_method({
-    --                                                 config_overrides = type(opts.test) ~= "boolean"
-    --                                                         and opts.test.config_overrides
-    --                                                     or nil,
-    --                                             })
-    --                                         end,
-    --                                         desc = "Run Nearest Test",
-    --                                     },
-    --                                     { "<leader>tT", require("jdtls.dap").pick_test, desc = "Run Test" },
-    --                                 },
-    --                             })
-    --                         end
-    --                     end
-    --
-    --                     -- User can set additional keymaps in opts.on_attach
-    --                     if opts.on_attach then
-    --                         opts.on_attach(args)
-    --                     end
-    --                 end
-    --             end,
-    --         })
-    --
-    --         -- Avoid race condition by calling attach the first time, since the autocmd won't fire.
-    --         attach_jdtls()
-    --     end,
-    -- },
 }

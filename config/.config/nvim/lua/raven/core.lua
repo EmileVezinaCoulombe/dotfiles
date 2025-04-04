@@ -24,6 +24,7 @@ local M = {
     spec = {
         { import = "raven.plugins" },
         { import = "raven.plugins.coding" },
+        { import = "raven.plugins.misc" },
         { import = "raven.plugins.test" },
         change_detection = {
             enabled = true,

@@ -6,9 +6,13 @@ SESSION_NAME="session9"
 alias cdn='cd $CLOUD_DIR/vault/$SESSION_NAME'
 alias cdc='cd ~/code/$SESSION_NAME'
 
+alias testcov='mvn clean test jacoco:report jacoco:check && xdg-open application/target/site/jacoco/index.html'
+
 alias cdalgo='cdc && cd algo/'
 alias ltsa='nohup java -jar /home/emile/Nextcloud/USER-Emile/vault/session8/spec/ltsatool/ltsa.jar >/dev/null 2>&1 &'
 alias perfect='nohup /opt/escher/verificationstudio7/bin/verificationstudio >/dev/null 2>&1 &'
+
+# alias fame-nu="python -m gitfame --loc='ins,del' --incl='\**/*.java$' -R | lines | range 4..23 |  each { |elt| ($elt | str replace --all ' ' '') } | split column '|' | headers | reject column0 column6 0"
 
 ################################################################################
 # Dev
@@ -26,6 +30,52 @@ alias gtwatcher='cd ~/code/session6/proof-of-concept/watcher && vim'
 alias gtem='cd ~/code/EmileVezinaCoulombe && vim'
 alias vault='cd $CLOUD_DIR/vault && vim'
 alias tmp='vim ~/tmp.txt'
+
+# Extra
+function catfiles() {
+    local output_file="tmp.txt"
+    local file_pattern="*"
+    local exclude_pattern="*/venv/*"
+
+    # Parse named arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+        --ext | --extension | -e)
+            file_pattern="*.$2"
+            shift 2
+            ;;
+        --output | -o)
+            output_file="$2"
+            shift 2
+            ;;
+        --exclude | -x)
+            exclude_pattern="$2"
+            shift 2
+            ;;
+        --help | -h)
+            echo "Usage: catfiles [options]"
+            echo "Options:"
+            echo "  --ext, -e      File extension (without dot, e.g., 'py' for Python files)"
+            echo "  --output, -o   Output file (default: tmp.txt)"
+            echo "  --exclude, -x  Exclude pattern (default: */venv/*)"
+            echo "  --help, -h     Show this help message"
+            return 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            return 1
+            ;;
+        esac
+    done
+
+    # Execute the find command with the specified parameters
+    find . -name "$file_pattern" -type f -not -path "$exclude_pattern" -exec sh -c '
+        echo "\n=== $1 ==="
+        cat "$1"
+    ' sh {} \; >"$output_file"
+
+    echo "Files concatenated to $output_file"
+}
 
 ################################################################################
 # Rename
@@ -110,9 +160,9 @@ alias gap='git add -p'
 # Commit
 alias gcr='git commit --amend'
 # Commit
-alias gc='git cc'                       # Interactive conventional commit
+alias gc='git cc'                        # Interactive conventional commit
 alias gcf='git commit --amend --no-edit' # Fix last commit
-alias gfu='git fixup'                   # Interactive fixup
+alias gfu='git fixup'                    # Interactive fixup
 
 # Diff
 alias gd='git diff'
@@ -128,22 +178,20 @@ alias gf='git fetch origin'
 alias gs='git stash'
 alias gsp='git stash pop'
 # Stash operations
-alias gs='git stash'                    # Stash changes
-alias gsp='git spi'                     # Interactive stash pop with preview
-alias gsa='git sai'                     # Interactive stash apply with preview
-alias gsd='git sdi'                     # Interactive stash drop with preview
-alias gsl='git stash list'              # List stashes
-
+alias gs='git stash'       # Stash changes
+alias gsp='git spi'        # Interactive stash pop with preview
+alias gsa='git sai'        # Interactive stash apply with preview
+alias gsd='git sdi'        # Interactive stash drop with preview
+alias gsl='git stash list' # List stashes
 
 # Rebase
 alias gr='git rebase -i'
 # Rebase operations
-alias grb='git irb'                     # Interactive rebase with preview
-alias grb2='git irb2'                   # Interactive rebase between commits
-alias gup='git cup'                     # Move commit up
-alias gdown='git cdown'                 # Move commit down
-alias grw='git reword'                  # Reword commit
-
+alias grb='git irb'     # Interactive rebase with preview
+alias grb2='git irb2'   # Interactive rebase between commits
+alias gup='git cup'     # Move commit up
+alias gdown='git cdown' # Move commit down
+alias grw='git reword'  # Reword commit
 
 # Reset
 alias grh='git reset --hard'
@@ -171,16 +219,16 @@ alias gbd='git branch -d'
 alias gbD='git branch -D'
 alias gbl='git branch -a'
 # Branch operations
-alias gb='git branch'                   # List branches
-alias gbl='git branch -a'               # List all branches
-alias gbd='git branch -d'               # Delete branch
-alias gbD='git branch -D'               # Force delete branch
-alias gco='git cb'                      # Interactive checkout with preview
-alias gcb='git checkout -b'             # Create and checkout new branch
+alias gb='git branch'       # List branches
+alias gbl='git branch -a'   # List all branches
+alias gbd='git branch -d'   # Delete branch
+alias gbD='git branch -D'   # Force delete branch
+alias gco='git cb'          # Interactive checkout with preview
+alias gcb='git checkout -b' # Create and checkout new branch
 
 # Remote
-alias gr='git remote'
-alias grv='git remote -v'
+alias grem='git remote'
+alias gremv='git remote -v'
 # Remote operations
 alias gf='git fetch --all -p'           # Fetch all and prune
 alias gpl='git pull'                    # Pull
@@ -197,121 +245,159 @@ alias glga2='git plog2 --all'
 alias glg3='git plog3'
 alias glga3='git plog3 --all'
 # Log operations
-alias gl='git plog1'                    # Simple log
-alias gla='git plog1 --all'             # Simple log (all branches)
-alias gl2='git plog2'                   # Detailed log
-alias gl2a='git plog2 --all'            # Detailed log (all branches)
-alias gl3='git plog3'                   # Full log
-alias gl3a='git plog3 --all'            # Full log (all branches)
-alias glf='git flog'                    # Interactive log with preview
-
+alias gl='git plog1'         # Simple log
+alias gla='git plog1 --all'  # Simple log (all branches)
+alias gl2='git plog2'        # Detailed log
+alias gl2a='git plog2 --all' # Detailed log (all branches)
+alias gl3='git plog3'        # Full log
+alias gl3a='git plog3 --all' # Full log (all branches)
+alias glf='git flog'         # Interactive log with preview
 
 # Status
 alias gs='git status'
 alias gss='git status -s'
 # Status and diff
-alias gst='git status'                  # Full status
-alias gss='git status -s'               # Short status
-alias gd='git diff'                     # Show diff
-alias gds='git diff --staged'           # Show staged diff
-
+alias gst='git status'        # Full status
+alias gss='git status -s'     # Short status
+alias gd='git diff'           # Show diff
+alias gds='git diff --staged' # Show staged diff
 
 # Clean
 alias gclean='git clean -fd'
 # Cleanup
-alias gclean='git clean -fd'            # Remove untracked files
-alias gcleanup='git cleanup'            # Remove merged branches
+alias gclean='git clean -fd' # Remove untracked files
+alias gcleanup='git cleanup' # Remove merged branches
 
 ################################################################################
 # Tmux
 
-alias t='attach-session (attach) [-dErx] [-c working-directory] [-f flags] [-t target-session]'
-alias t='bind-key (bind) [-nr] [-T key-table] [-N note] key [command [arguments]]'
-alias t='break-pane (breakp) [-abdP] [-F format] [-n window-name] [-s src-pane] [-t dst-window]'
-alias t='capture-pane (capturep) [-aCeJNpPq] [-b buffer-name] [-E end-line] [-S start-line] [-t target-pane]'
-alias t='choose-buffer [-NrZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
-alias t='choose-client [-NrZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
-alias t='choose-tree [-GNrswZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
-alias t='clear-history (clearhist) [-t target-pane]'
-alias t='clock-mode [-t target-pane]'
-alias t='command-prompt [-1kiNTW] [-I inputs] [-p prompts] [-t target-client] [template]'
-alias t='confirm-before (confirm) [-p prompt] [-t target-client] command'
-alias t='copy-mode [-eHMuq] [-s src-pane] [-t target-pane]'
-alias t='customize-mode [-NZ] [-F format] [-f filter] [-t target-pane]'
-alias t='delete-buffer (deleteb) [-b buffer-name]'
-alias t='detach-client (detach) [-aP] [-E shell-command] [-s target-session] [-t target-client]'
-alias t='display-menu (menu) [-O] [-c target-client] [-t target-pane] [-T title] [-x position] [-y position] name key command ...'
-alias t='display-message (display) [-aINpv] [-c target-client] [-d delay] [-F format] [-t target-pane] [message]'
-alias t='display-popup (popup) [-CE] [-c target-client] [-d start-directory] [-h height] [-t target-pane] [-w width] [-x position] [-y position] [command]'
-alias t='display-panes (displayp) [-bN] [-d duration] [-t target-client] [template]'
-alias t='find-window (findw) [-CiNrTZ] [-t target-pane] match-string'
-alias t='has-session (has) [-t target-session]'
-alias t='if-shell (if) [-bF] [-t target-pane] shell-command command [command]'
-alias t='join-pane (joinp) [-bdfhv] [-l size] [-s src-pane] [-t dst-pane]'
-alias t='kill-pane (killp) [-a] [-t target-pane]'
-alias t='kill-server '
-alias t='kill-session [-aC] [-t target-session]'
-alias t='kill-window (killw) [-a] [-t target-window]'
-alias t='last-pane (lastp) [-deZ] [-t target-window]'
-alias t='last-window (last) [-t target-session]'
-alias t='link-window (linkw) [-abdk] [-s src-window] [-t dst-window]'
-alias t='list-buffers (lsb) [-F format] [-f filter]'
-alias t='list-clients (lsc) [-F format] [-t target-session]'
-alias t='list-commands (lscm) [-F format] [command]'
-alias t='list-keys (lsk) [-1aN] [-P prefix-string] [-T key-table] [key]'
-alias t='list-panes (lsp) [-as] [-F format] [-f filter] [-t target-window]'
-alias t='list-sessions (ls) [-F format] [-f filter]'
-alias t='list-windows (lsw) [-a] [-F format] [-f filter] [-t target-session]'
-alias t='load-buffer (loadb) [-b buffer-name] [-t target-client] path'
-alias t='lock-client (lockc) [-t target-client]'
-alias t='lock-server (lock) '
-alias t='lock-session (locks) [-t target-session]'
-alias t='move-pane (movep) [-bdfhv] [-l size] [-s src-pane] [-t dst-pane]'
-alias t='move-window (movew) [-abdkr] [-s src-window] [-t dst-window]'
-alias t='new-session (new) [-AdDEPX] [-c start-directory] [-e environment] [-F format] [-f flags] [-n window-name] [-s session-name] [-t target-session] [-x width] [-y height] [command]'
-alias t='new-window (neww) [-abdkPS] [-c start-directory] [-e environment] [-F format] [-n window-name] [-t target-window] [command]'
-alias t='next-layout (nextl) [-t target-window]'
-alias t='next-window (next) [-a] [-t target-session]'
-alias t='paste-buffer (pasteb) [-dpr] [-s separator] [-b buffer-name] [-t target-pane]'
-alias t='pipe-pane (pipep) [-IOo] [-t target-pane] [command]'
-alias t='previous-layout (prevl) [-t target-window]'
-alias t='previous-window (prev) [-a] [-t target-session]'
-alias t='refresh-client (refresh) [-cDlLRSU] [-A pane:state] [-B name:what:format] [-C XxY] [-f flags] [-t target-client] [adjustment]'
-alias t='rename-session (rename) [-t target-session] new-name'
-alias t='rename-window (renamew) [-t target-window] new-name'
-alias t='resize-pane (resizep) [-DLMRTUZ] [-x width] [-y height] [-t target-pane] [adjustment]'
-alias t='resize-window (resizew) [-aADLRU] [-x width] [-y height] [-t target-window] [adjustment]'
-alias t='respawn-pane (respawnp) [-k] [-c start-directory] [-e environment] [-t target-pane] [command]'
-alias t='respawn-window (respawnw) [-k] [-c start-directory] [-e environment] [-t target-window] [command]'
-alias t='rotate-window (rotatew) [-DUZ] [-t target-window]'
-alias t='run-shell (run) [-bC] [-d delay] [-t target-pane] [shell-command]'
-alias t='save-buffer (saveb) [-a] [-b buffer-name] path'
-alias t='select-layout (selectl) [-Enop] [-t target-pane] [layout-name]'
-alias t='select-pane (selectp) [-DdeLlMmRUZ] [-T title] [-t target-pane]'
-alias t='select-window (selectw) [-lnpT] [-t target-window]'
-alias t='send-keys (send) [-FHlMRX] [-N repeat-count] [-t target-pane] key ...'
-alias t='send-prefix [-2] [-t target-pane]'
-alias t='set-buffer (setb) [-aw] [-b buffer-name] [-n new-buffer-name] [-t target-client] data'
-alias t='set-environment (setenv) [-Fhgru] [-t target-session] name [value]'
-alias t='set-hook [-agpRuw] [-t target-pane] hook [command]'
-alias t='set-option (set) [-aFgopqsuUw] [-t target-pane] option [value]'
-alias t='set-window-option (setw) [-aFgoqu] [-t target-window] option [value]'
-alias t='show-buffer (showb) [-b buffer-name]'
-alias t='show-environment (showenv) [-hgs] [-t target-session] [name]'
-alias t='show-hooks [-gpw] [-t target-pane]'
-alias t='show-messages (showmsgs) [-JT] [-t target-client]'
-alias t='show-options (show) [-AgHpqsvw] [-t target-pane] [option]'
-alias t='show-window-options (showw) [-gv] [-t target-window] [option]'
-alias t='source-file (source) [-Fnqv] path ...'
-alias t='split-window (splitw) [-bdefhIPvZ] [-c start-directory] [-e environment] [-F format] [-l size] [-t target-pane] [command]'
-alias t='start-server (start) '
-alias t='suspend-client (suspendc) [-t target-client]'
-alias t='swap-pane (swapp) [-dDUZ] [-s src-pane] [-t dst-pane]'
-alias t='swap-window (swapw) [-d] [-s src-window] [-t dst-window]'
-alias t='switch-client (switchc) [-ElnprZ] [-c target-client] [-t target-session] [-T key-table]'
-alias t='unbind-key (unbind) [-anq] [-T key-table] key'
-alias t='unlink-window (unlinkw) [-k] [-t target-window]'
-alias t='wait-for (wait) [-L|-S|-U] channel'
+# Basic session management
+alias t='tmux'
+alias tas='tmux attach -t'
+alias tad='tmux attach -d -t'
+alias tns='tmux new-session -s'
+alias tls='tmux list-sessions'
+alias tkill='tmux kill-session -t'
+alias tinfo='tmux info'
+
+# Window management
+alias tnw='tmux new-window'
+alias tsw='tmux select-window -t'
+alias tlw='tmux list-windows'
+alias trw='tmux rename-window'
+
+# Pane management
+# alias tsplit='tmux split-window -h'
+# alias tvsplit='tmux split-window -v'
+alias tkp='tmux kill-pane'
+
+# Navigation
+# alias -g tprev='tmux previous-window'
+# alias -g tnext='tmux next-window'
+# alias -g tlast='tmux last-window'
+
+# Layout management
+# alias trl='tmux select-layout main-horizontal'
+# alias tvl='tmux select-layout main-vertical'
+# alias ttl='tmux select-layout tiled'
+
+# Utility
+alias tks='tmux kill-server'
+alias td='tmux detach' # Detach from session
+
+# Synchronized panes
+alias tsync='tmux set-window-option synchronize-panes'
+
+# Copy mode
+alias tcopy='tmux copy-mode'
+
+# alias t='attach-session (attach) [-dErx] [-c working-directory] [-f flags] [-t target-session]'
+# alias t='bind-key (bind) [-nr] [-T key-table] [-N note] key [command [arguments]]'
+# alias t='break-pane (breakp) [-abdP] [-F format] [-n window-name] [-s src-pane] [-t dst-window]'
+# alias t='capture-pane (capturep) [-aCeJNpPq] [-b buffer-name] [-E end-line] [-S start-line] [-t target-pane]'
+# alias t='choose-buffer [-NrZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
+# alias t='choose-client [-NrZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
+# alias t='choose-tree [-GNrswZ] [-F format] [-f filter] [-K key-format] [-O sort-order] [-t target-pane] [template]'
+# alias t='clear-history (clearhist) [-t target-pane]'
+# alias t='clock-mode [-t target-pane]'
+# alias t='command-prompt [-1kiNTW] [-I inputs] [-p prompts] [-t target-client] [template]'
+# alias t='confirm-before (confirm) [-p prompt] [-t target-client] command'
+# alias t='copy-mode [-eHMuq] [-s src-pane] [-t target-pane]'
+# alias t='customize-mode [-NZ] [-F format] [-f filter] [-t target-pane]'
+# alias t='delete-buffer (deleteb) [-b buffer-name]'
+# alias t='detach-client (detach) [-aP] [-E shell-command] [-s target-session] [-t target-client]'
+# alias t='display-menu (menu) [-O] [-c target-client] [-t target-pane] [-T title] [-x position] [-y position] name key command ...'
+# alias t='display-message (display) [-aINpv] [-c target-client] [-d delay] [-F format] [-t target-pane] [message]'
+# alias t='display-popup (popup) [-CE] [-c target-client] [-d start-directory] [-h height] [-t target-pane] [-w width] [-x position] [-y position] [command]'
+# alias t='display-panes (displayp) [-bN] [-d duration] [-t target-client] [template]'
+# alias t='find-window (findw) [-CiNrTZ] [-t target-pane] match-string'
+# alias t='has-session (has) [-t target-session]'
+# alias t='if-shell (if) [-bF] [-t target-pane] shell-command command [command]'
+# alias t='join-pane (joinp) [-bdfhv] [-l size] [-s src-pane] [-t dst-pane]'
+# alias t='kill-pane (killp) [-a] [-t target-pane]'
+# alias t='kill-server '
+# alias t='kill-session [-aC] [-t target-session]'
+# alias t='kill-window (killw) [-a] [-t target-window]'
+# alias t='last-pane (lastp) [-deZ] [-t target-window]'
+# alias t='last-window (last) [-t target-session]'
+# alias t='link-window (linkw) [-abdk] [-s src-window] [-t dst-window]'
+# alias t='list-buffers (lsb) [-F format] [-f filter]'
+# alias t='list-clients (lsc) [-F format] [-t target-session]'
+# alias t='list-commands (lscm) [-F format] [command]'
+# alias t='list-keys (lsk) [-1aN] [-P prefix-string] [-T key-table] [key]'
+# alias t='list-panes (lsp) [-as] [-F format] [-f filter] [-t target-window]'
+# alias t='list-sessions (ls) [-F format] [-f filter]'
+# alias t='list-windows (lsw) [-a] [-F format] [-f filter] [-t target-session]'
+# alias t='load-buffer (loadb) [-b buffer-name] [-t target-client] path'
+# alias t='lock-client (lockc) [-t target-client]'
+# alias t='lock-server (lock) '
+# alias t='lock-session (locks) [-t target-session]'
+# alias t='move-pane (movep) [-bdfhv] [-l size] [-s src-pane] [-t dst-pane]'
+# alias t='move-window (movew) [-abdkr] [-s src-window] [-t dst-window]'
+# alias t='new-session (new) [-AdDEPX] [-c start-directory] [-e environment] [-F format] [-f flags] [-n window-name] [-s session-name] [-t target-session] [-x width] [-y height] [command]'
+# alias t='new-window (neww) [-abdkPS] [-c start-directory] [-e environment] [-F format] [-n window-name] [-t target-window] [command]'
+# alias t='next-layout (nextl) [-t target-window]'
+# alias t='next-window (next) [-a] [-t target-session]'
+# alias t='paste-buffer (pasteb) [-dpr] [-s separator] [-b buffer-name] [-t target-pane]'
+# alias t='pipe-pane (pipep) [-IOo] [-t target-pane] [command]'
+# alias t='previous-layout (prevl) [-t target-window]'
+# alias t='previous-window (prev) [-a] [-t target-session]'
+# alias t='refresh-client (refresh) [-cDlLRSU] [-A pane:state] [-B name:what:format] [-C XxY] [-f flags] [-t target-client] [adjustment]'
+# alias t='rename-session (rename) [-t target-session] new-name'
+# alias t='rename-window (renamew) [-t target-window] new-name'
+# alias t='resize-pane (resizep) [-DLMRTUZ] [-x width] [-y height] [-t target-pane] [adjustment]'
+# alias t='resize-window (resizew) [-aADLRU] [-x width] [-y height] [-t target-window] [adjustment]'
+# alias t='respawn-pane (respawnp) [-k] [-c start-directory] [-e environment] [-t target-pane] [command]'
+# alias t='respawn-window (respawnw) [-k] [-c start-directory] [-e environment] [-t target-window] [command]'
+# alias t='rotate-window (rotatew) [-DUZ] [-t target-window]'
+# alias t='run-shell (run) [-bC] [-d delay] [-t target-pane] [shell-command]'
+# alias t='save-buffer (saveb) [-a] [-b buffer-name] path'
+# alias t='select-layout (selectl) [-Enop] [-t target-pane] [layout-name]'
+# alias t='select-pane (selectp) [-DdeLlMmRUZ] [-T title] [-t target-pane]'
+# alias t='select-window (selectw) [-lnpT] [-t target-window]'
+# alias t='send-keys (send) [-FHlMRX] [-N repeat-count] [-t target-pane] key ...'
+# alias t='send-prefix [-2] [-t target-pane]'
+# alias t='set-buffer (setb) [-aw] [-b buffer-name] [-n new-buffer-name] [-t target-client] data'
+# alias t='set-environment (setenv) [-Fhgru] [-t target-session] name [value]'
+# alias t='set-hook [-agpRuw] [-t target-pane] hook [command]'
+# alias t='set-option (set) [-aFgopqsuUw] [-t target-pane] option [value]'
+# alias t='set-window-option (setw) [-aFgoqu] [-t target-window] option [value]'
+# alias t='show-buffer (showb) [-b buffer-name]'
+# alias t='show-environment (showenv) [-hgs] [-t target-session] [name]'
+# alias t='show-hooks [-gpw] [-t target-pane]'
+# alias t='show-messages (showmsgs) [-JT] [-t target-client]'
+# alias t='show-options (show) [-AgHpqsvw] [-t target-pane] [option]'
+# alias t='show-window-options (showw) [-gv] [-t target-window] [option]'
+# alias t='source-file (source) [-Fnqv] path ...'
+# alias t='split-window (splitw) [-bdefhIPvZ] [-c start-directory] [-e environment] [-F format] [-l size] [-t target-pane] [command]'
+# alias t='start-server (start) '
+# alias t='suspend-client (suspendc) [-t target-client]'
+# alias t='swap-pane (swapp) [-dDUZ] [-s src-pane] [-t dst-pane]'
+# alias t='swap-window (swapw) [-d] [-s src-window] [-t dst-window]'
+# alias t='switch-client (switchc) [-ElnprZ] [-c target-client] [-t target-session] [-T key-table]'
+# alias t='unbind-key (unbind) [-anq] [-T key-table] key'
+# alias t='unlink-window (unlinkw) [-k] [-t target-window]'
+# alias t='wait-for (wait) [-L|-S|-U] channel'
 
 ################################################################################
 # Colorize
