@@ -1,16 +1,14 @@
-#!/usr/bin/env zsh
-STOW_FOLDERS="config,firefox,fonts,git,wallpaper"
+#!/usr/bin/env bash
+STOW_FOLDERS="config,firefox,git,wallpaper"
 
 if [[ -z $DOTFILES ]]; then
     DOTFILES=$HOME/.dotfiles
 fi
 
-
-pushd $DOTFILES
-for folder in $(echo $STOW_FOLDERS | sed "s/,/ /g")
+pushd "$DOTFILES"
+for folder in $(echo $STOW_FOLDERS | tr ',' ' ')
 do
-    echo "Stowing $folder..."
-    stow -D $folder 2>/dev/null
-    stow -t $HOME $folder
+    echo "Restowing $folder..."
+    stow --target="$HOME" --restow "$folder"
 done
 popd

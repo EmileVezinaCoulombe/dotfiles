@@ -9,3 +9,4 @@ nixos/hardware-configuration.nix
 
 config/.config/zsh/.zcompdump
 config/.config/zsh/.zsh_history
+config/.config/gh/hosts.yml
