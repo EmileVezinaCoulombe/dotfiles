@@ -11,6 +11,8 @@
 export PATH="/.local/bin/nvim:$PATH"
 export PATH="$HOME/.emacs.d/bin:$PATH"
 export PATH="$PYENV_ROOT/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="/opt/homebrew/sbin:$PATH"
 
 if [ -d "$HOME/bin" ]; then
     PATH="$HOME/bin:$PATH"
@@ -29,9 +31,22 @@ if [ -d "$PYENV_ROOT/bin" ]; then
 fi
 
 ################################################################################
+# Fix https://github.com/keybase/keybase-issues/issues/2798
+
+export GPG_TTY=$(tty)
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    export GH_BROWSER="open"
+fi
+
+################################################################################
 # Source
 source "$ZALIASES"
 source "$ZFUNCTIONS"
+
+if [ -f "$ZSECRETS" ]; then
+  source "$ZSECRETS"
+fi
 
 ################################################################################
 # History
@@ -53,7 +68,7 @@ plug "zap-zsh/supercharge"
 plug "MichaelAquilina/zsh-you-should-use"
 plug "hlissner/zsh-autopair"
 
-plug "zap-zsh/exa"
+# plug "zap-zsh/exa"
 plug "zsh-users/zsh-syntax-highlighting"
 
 plug "zap-zsh/fzf"
@@ -62,6 +77,8 @@ plug "wintermi/zsh-rust"
 
 ################################################################################
 ## Completions
+
+export FPATH="/opt/homebrew/share/zsh/site-functions:$FPATH"
 
 autoload -Uz compinit
 compinit -u
@@ -86,9 +103,9 @@ eval "$(starship init zsh)"
 export PATH="$HOME/neovim/bin:$PATH"
 
 # NVM, NPM and NODE.zsh
-NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
-export NVM_DIR
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+export NVM_DIR="$HOME/.config/nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 ## Go
 if [ -d "/usr/local/go" ]; then
@@ -169,3 +186,4 @@ Bookmarks="b:$HOME/.config/nnn/bookmarks"
 Documents="d:$HOME/Documents"
 Downloads="D:$HOME/Downloads/"
 export NNN_BMS="$Bookmarks;$Documents;$Downloads"
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

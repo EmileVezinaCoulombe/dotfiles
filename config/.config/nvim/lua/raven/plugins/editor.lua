@@ -98,7 +98,6 @@ return {
             },
         }
     },
-
     {
         "nvim-lualine/lualine.nvim",
         opts = {
@@ -125,7 +124,7 @@ return {
                 lualine_a = { 'mode' },
                 lualine_b = { 'branch', 'diff', 'diagnostics' },
                 lualine_c = { 'filename' },
-                lualine_x = {},
+                lualine_x = { 'require("raven.utils").get_project_name()' },
                 lualine_y = { 'progress' },
                 lualine_z = { 'location' }
             },
@@ -144,24 +143,6 @@ return {
         },
     },
     {
-        "nvim-lualine/lualine.nvim",
-        opts = function(_, opts)
-            -- local trouble = require("trouble")
-            -- local symbols = trouble.statusline({
-            --     mode = "lsp_document_symbols",
-            --     groups = {},
-            --     title = false,
-            --     filter = { range = true },
-            --     format = "{kind_icon}{symbol.name:Normal}",
-            --     hl_group = "lualine_c_normal",
-            -- })
-            -- table.insert(opts.sections.lualine_c, {
-            --     symbols.get,
-            --     cond = symbols.has,
-            -- })
-        end,
-    },
-    {
         "ThePrimeagen/vim-apm",
         opts = {},
         config = function(_, opts)
@@ -170,7 +151,7 @@ return {
         end,
         keys = {
             {
-                "<leader>um",
+                "<leader>uM",
                 function()
                     require("vim-apm"):toggle_monitor()
                 end,
@@ -409,97 +390,118 @@ return {
         },
     },
     {
-        "epwalsh/obsidian.nvim",
-        version = "*",
-        lazy = true,
-        ft = "markdown",
-        event = {
-            -- refer to `:h file-pattern` for more examples
-            "BufReadPre "
-            .. vim.fn.expand("~")
-            .. "/OneDrive/vault/*.md",
-            "BufNewFile " .. vim.fn.expand("~") .. "/OneDrive/vault/*.md",
-        },
-        dependencies = {
-            "nvim-lua/plenary.nvim",
-            "hrsh7th/nvim-cmp",
-            {
-                "folke/which-key.nvim",
-                opts = {
-                    defaults = {
-                        ["<leader>o"] = { name = "+Obsidian" },
-                    },
-                },
-            },
-        },
+        "MeanderingProgrammer/render-markdown.nvim",
         opts = {
-            workspaces = {
-                {
-                    name = "personal",
-                    path = "~/OneDrive/vault",
+            anti_conceal = {
+                enabled = true,
+                disabled_modes = false,
+                above = 5,
+                below = 5,
+                ignore = {
+                    code_background = true,
+                    sign = true,
                 },
             },
-            templates = {
-                folder = "template",
-                date_format = "%d-%m-%Y",
-                time_format = "%H:%M",
-            },
-            mappings = {
-                ["gf"] = {
-                    action = function()
-                        return require("obsidian").util.gf_passthrough()
-                    end,
-                    opts = { noremap = false, expr = true, buffer = true },
-                },
-                -- Toggle check-boxes.
-                ["<leader>ch"] = {
-                    action = function()
-                        return require("obsidian").util.toggle_checkbox()
-                    end,
-                    opts = { buffer = true },
-                },
-                -- Smart action depending on context, either follow link or toggle checkbox.
-                ["<cr>"] = {
-                    action = function()
-                        return require("obsidian").util.smart_action()
-                    end,
-                    opts = { buffer = true, expr = true },
-                },
-            },
-        },
-        keys = {
-            { "gX",         "<cmd>ObsidianOpen<cr>",            desc = "Go to Obsidian" },
-            { "<leader>oN", "<cmd>ObsidianNew<cr>",             desc = "New file" },
-            { "<leader>on", "<cmd>ObsidianNewFromTemplate<cr>", desc = "New file from template" },
-            {
-                "<leader>on",
-                mode = { "v" },
-                "<cmd>ObsidianLinkNew<cr>",
-                desc = "New file with link",
-            },
-            {
-                "<leader>oe",
-                mode = { "v" },
-                "<cmd>ObsidianExtractNote<cr>",
-                desc = "Extract to a new file",
-            },
-            { "gf",                "<cmd>ObsidianFollowLink<cr>",     desc = "Go to file" },
-            { "<leader>o<leader>", "<cmd>ObsidianQuickSwitch<cr>",    desc = "Search file" },
-            { "<leader>og",        "<cmd>ObsidianSearch<cr>",         desc = "Search Grep" },
-            { "gr",                "<cmd>ObsidianBacklinks<cr>",      desc = "References" },
-            { "<leader>ot",        "<cmd>ObsidianTags<cr>",           desc = "Search tags" },
-            { "<leader>oi",        "<cmd>ObsidianTemplate<cr>",       desc = "Insert Template" },
-            { "<leader>ol",        "<cmd>ObsidianLinks<cr>",          desc = "Serch links" },
-            { "<leader>ow",        "<cmd>ObsidianWorkspace<cr>",      desc = "Workspaces" },
-            -- { "<leader>p",         "<cmd>ObsidianPasteImg<cr>",       desc = "Paste clipboard image" },
-            { "<leader>cr",        "<cmd>ObsidianRename<cr>",         desc = "Rename" },
-            { "<leader>od",        "<cmd>ObsidianToggleCheckbox<cr>", desc = "Done" },
-            { "<leader>oh",        "<cmd>ObsidianTOC<cr>",            desc = "TOC header" },
-            -- { "",                  "<cmd>ObsidianLink<cr>",           desc = "" },
-            -- { "",                  "<cmd>ObsidianToday<cr>",          desc = "" },
-            -- { "",                  "<cmd>ObsidianTomorrow<cr>",       desc = "" },
-            -- { "",                  "<cmd>ObsidianYesterday<cr>",      desc = "" },
-            -- { "",                  "<cmd>ObsidianDailies<cr>",        desc = "" },
-        },
-    },
+            code = {
+                -- Determines how the top / bottom of code block are rendered.
+                -- | none  | do not render a border                               |
+                -- | thick | use the same highlight as the code body              |
+                -- | thin  | when lines are empty overlay the above & below icons |
+                -- | hide  | conceal lines unless language name or icon is added  |
+                border = 'thick',
+            }
+        }
+    }
+    -- {
+    --     "epwalsh/obsidian.nvim",
+    --     version = "*",
+    --     lazy = true,
+    --     ft = "markdown",
+    --     event = {
+    --         -- refer to `:h file-pattern` for more examples
+    --         "BufReadPre " .. vim.fn.expand("~") .. "/OneDrive/vault/*.md",
+    --         "BufNewFile " .. vim.fn.expand("~") .. "/OneDrive/vault/*.md",
+    --     },
+    --     dependencies = {
+    --         "nvim-lua/plenary.nvim",
+    --         "hrsh7th/nvim-cmp",
+    --         {
+    --             "folke/which-key.nvim",
+    --             opts = {
+    --                 defaults = {
+    --                     ["<leader>o"] = { name = "+Obsidian" },
+    --                 },
+    --             },
+    --         },
+    --     },
+    --     opts = {
+    --         workspaces = {
+    --             {
+    --                 name = "personal",
+    --                 path = "~/OneDrive/vault",
+    --             },
+    --         },
+    --         templates = {
+    --             folder = "template",
+    --             date_format = "%d-%m-%Y",
+    --             time_format = "%H:%M",
+    --         },
+    --         mappings = {
+    --             ["gf"] = {
+    --                 action = function()
+    --                     return require("obsidian").util.gf_passthrough()
+    --                 end,
+    --                 opts = { noremap = false, expr = true, buffer = true },
+    --             },
+    --             -- Toggle check-boxes.
+    --             ["<leader>ch"] = {
+    --                 action = function()
+    --                     return require("obsidian").util.toggle_checkbox()
+    --                 end,
+    --                 opts = { buffer = true },
+    --             },
+    --             -- Smart action depending on context, either follow link or toggle checkbox.
+    --             ["<cr>"] = {
+    --                 action = function()
+    --                     return require("obsidian").util.smart_action()
+    --                 end,
+    --                 opts = { buffer = true, expr = true },
+    --             },
+    --         },
+    --     },
+    --     keys = {
+    --         { "gX",         "<cmd>ObsidianOpen<cr>",            desc = "Go to Obsidian" },
+    --         { "<leader>oN", "<cmd>ObsidianNew<cr>",             desc = "New file" },
+    --         { "<leader>on", "<cmd>ObsidianNewFromTemplate<cr>", desc = "New file from template" },
+    --         {
+    --             "<leader>on",
+    --             mode = { "v" },
+    --             "<cmd>ObsidianLinkNew<cr>",
+    --             desc = "New file with link",
+    --         },
+    --         {
+    --             "<leader>oe",
+    --             mode = { "v" },
+    --             "<cmd>ObsidianExtractNote<cr>",
+    --             desc = "Extract to a new file",
+    --         },
+    --         { "gf",                "<cmd>ObsidianFollowLink<cr>",     desc = "Go to file" },
+    --         { "<leader>o<leader>", "<cmd>ObsidianQuickSwitch<cr>",    desc = "Search file" },
+    --         { "<leader>og",        "<cmd>ObsidianSearch<cr>",         desc = "Search Grep" },
+    --         { "gr",                "<cmd>ObsidianBacklinks<cr>",      desc = "References" },
+    --         { "<leader>ot",        "<cmd>ObsidianTags<cr>",           desc = "Search tags" },
+    --         { "<leader>oi",        "<cmd>ObsidianTemplate<cr>",       desc = "Insert Template" },
+    --         { "<leader>ol",        "<cmd>ObsidianLinks<cr>",          desc = "Serch links" },
+    --         { "<leader>ow",        "<cmd>ObsidianWorkspace<cr>",      desc = "Workspaces" },
+    --         -- { "<leader>p",         "<cmd>ObsidianPasteImg<cr>",       desc = "Paste clipboard image" },
+    --         { "<leader>cr",        "<cmd>ObsidianRename<cr>",         desc = "Rename" },
+    --         { "<leader>od",        "<cmd>ObsidianToggleCheckbox<cr>", desc = "Done" },
+    --         { "<leader>oh",        "<cmd>ObsidianTOC<cr>",            desc = "TOC header" },
+    --         -- { "",                  "<cmd>ObsidianLink<cr>",           desc = "" },
+    --         -- { "",                  "<cmd>ObsidianToday<cr>",          desc = "" },
+    --         -- { "",                  "<cmd>ObsidianTomorrow<cr>",       desc = "" },
+    --         -- { "",                  "<cmd>ObsidianYesterday<cr>",      desc = "" },
+    --         -- { "",                  "<cmd>ObsidianDailies<cr>",        desc = "" },
+    --     },
+    -- },
 }

@@ -11,7 +11,7 @@ return {
             },
         },
     },
-    { "Bilal2453/luvit-meta",               lazy = true },
+    { "Bilal2453/luvit-meta", lazy = true },
     {
         "Wansmer/symbol-usage.nvim",
         event = 'LspAttach',
@@ -22,6 +22,8 @@ return {
                 kinds = { SymbolKind.Function, SymbolKind.Method },
                 ---@type 'above'|'end_of_line'|'textwidth'|'signcolumn' `above` by default
                 vt_position = 'end_of_line',
+                log = { enabled = false },
+                disable = { lsp = {}, filetypes = {}, cond = {} },
             })
         end,
         keys = { {
@@ -49,6 +51,7 @@ return {
             { "hrsh7th/cmp-nvim-lua" },
             { "Saecki/crates.nvim" },
             { "roobert/tailwindcss-colorizer-cmp.nvim", config = true },
+            { "onsails/lspkind.nvim",                   config = {} }
         },
         -- opts = { sources = { name = "crates" } },
         opts = function()
@@ -57,7 +60,6 @@ return {
             local defaults = require("cmp.config.default")()
 
             return {
-                sorting = defaults.sorting,
                 default_timeout = 500,
                 experimental = {
                     -- ghost_text = {
@@ -93,9 +95,10 @@ return {
                     ["<C-e>"] = cmp.mapping.abort(),
                 }),
                 sources = cmp.config.sources({
-                    { name = "nvim_lsp" },
-                    { name = "path" },
-                    { name = "luasnip" },
+                    { name = "copilot",  group_index = 2 },
+                    { name = "nvim_lsp", group_index = 2 },
+                    { name = "path",     group_index = 2 },
+                    { name = "luasnip",  group_index = 2 },
                     -- { name = "nvim_lsp:tailwindcss" },
                 }, {
                     { name = "buffer" },
@@ -104,6 +107,28 @@ return {
                     { name = "emoji" },
                     -- { name = "git" },
                 }),
+                formatting = {
+                    format = require('lspkind').cmp_format({
+                        mode = "symbol",
+                        max_width = 50,
+                        symbol_map = { Copilot = "" }
+                    })
+                },
+                sorting = {
+                    priority_weight = 2,
+                    comparators = {
+                        require("copilot_cmp.comparators").prioritize,
+                        cmp.config.compare.offset,
+                        cmp.config.compare.exact,
+                        cmp.config.compare.score,
+                        cmp.config.compare.recently_used,
+                        cmp.config.compare.locality,
+                        cmp.config.compare.kind,
+                        cmp.config.compare.sort_text,
+                        cmp.config.compare.length,
+                        cmp.config.compare.order,
+                    },
+                },
             }
         end,
     },
@@ -111,7 +136,22 @@ return {
         "j-hui/fidget.nvim",
         opts = {},
     },
-    { "artemave/workspace-diagnostics.nvim" },
+    {
+        "artemave/workspace-diagnostics.nvim",
+    },
+    {
+        "antosha417/nvim-lsp-file-operations",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+            -- Uncomment whichever supported plugin(s) you use
+            "nvim-tree/nvim-tree.lua",
+            -- "nvim-neo-tree/neo-tree.nvim",
+            -- "simonmclean/triptych.nvim"
+        },
+        config = function()
+            require("lsp-file-operations").setup()
+        end,
+    },
     {
         "neovim/nvim-lspconfig",
         cmd = { "LspInfo", "LspInstall", "LspStart" },
@@ -119,7 +159,6 @@ return {
         dependencies = {
             { "williamboman/mason.nvim" },
             { "williamboman/mason-lspconfig.nvim" },
-            { "jose-elias-alvarez/typescript.nvim" },
             { "j-hui/fidget.nvim" },
             { "hrsh7th/cmp-nvim-lsp" },
         },
@@ -129,18 +168,6 @@ return {
             servers = {
                 -- biome = {},
                 tailwindcss = {},
-                tsserver = {
-                    keys = {
-                        { "<leader>co", "<cmd>TypescriptOrganizeImports<CR>", desc = "Organize Imports" },
-                        { "<leader>cR", "<cmd>TypescriptRenameFile<CR>",      desc = "Rename File" },
-                    },
-                },
-                eslint = {
-                    settings = {
-                        -- helps eslint find the eslintrc when it's placed in a subfolder instead of the cwd root
-                        workingDirectory = { mode = "auto" },
-                    },
-                },
                 jdtls = false,
             },
         },
@@ -172,9 +199,11 @@ return {
 
                     map("n", "<leader>cl", "<cmd>LspInfo<cr>", { desc = "Lsp Info" })
                     map("n", "<C-f>", function()
+                        local _eslint_success, _ = pcall(vim.cmd, "EslintFixAll")
                         vim.lsp.buf.format({ async = false, timeout_ms = 10000 })
                     end, { desc = "Format" })
                     map("n", "<leader>cf", function()
+                        local _eslint_success, _ = pcall(vim.cmd, "EslintFixAll")
                         vim.lsp.buf.format({ async = false, timeout_ms = 10000 })
                     end, { desc = "Format" })
                     map("n", "gd", function()
@@ -261,6 +290,224 @@ return {
                     -- end
                 end,
             })
+
+            local cmp_lsp = require("cmp_nvim_lsp")
+            local capabilities = vim.tbl_deep_extend(
+                "force",
+                {},
+                vim.lsp.protocol.make_client_capabilities(),
+                cmp_lsp.default_capabilities(),
+                require('lsp-file-operations').default_capabilities()
+            )
+
+            require("lspconfig").sqlls.setup(require("raven.plugins.lsp-opts.sqlls"))
+            require("lspconfig").bashls.setup({
+                filetypes = { "sh", "zsh" },
+            })
+            require("lspconfig").yamlls.setup(require("raven.plugins.lsp-opts.yamlls"))
+            require("lspconfig").jsonls.setup(require("raven.plugins.lsp-opts.jsonls"))
+            require("lspconfig").lua_ls.setup({
+                capabilities = capabilities,
+                settings = {},
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                end,
+            })
+            require("lspconfig").angularls.setup({
+                capabilities = capabilities,
+                settings = {},
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                    vim.api.nvim_set_keymap('n', '<space>xp', '', {
+                        noremap = true,
+                        callback = function()
+                            for _, lsp_client in ipairs(vim.lsp.get_clients()) do
+                                require("workspace-diagnostics").populate_workspace_diagnostics(lsp_client, 0)
+                            end
+                        end
+                    })
+                end,
+            })
+            require("lspconfig").basedpyright.setup({
+                capabilities = capabilities,
+                settings = {},
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                end,
+            })
+            require("lspconfig").pylyzer.setup({
+                cmd = { "pylyzer", "--server" },
+                capabilities = capabilities,
+                settings = {}
+            })
+            require("lspconfig").ruff.setup({
+                capabilities = capabilities,
+                settings = {
+                    ruff = {
+                        lint = {
+                            enable = true,
+                        },
+                        organizeImports = true,
+                        fixAll = true,
+                    }
+                },
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                    local function format_and_organize()
+                        -- local params = {
+                        --     command = "ruff.applyOrganizeImports",
+                        --     arguments = {
+                        --         {
+                        --             uri = vim.uri_from_bufnr(0),
+                        --             version = vim.b[bufnr].changedtick,
+                        --         }
+                        --     }
+                        -- }
+                        -- vim.lsp.buf.execute_command(params)
+                        vim.lsp.buf.format({ async = false, timeout_ms = 100 })
+                    end
+                    vim.keymap.set('n', '<leader>cf', format_and_organize, {
+                        buffer = bufnr,
+                        desc = 'Format'
+                    })
+                end
+            })
+            require("lspconfig").tailwindcss.setup({
+                capabilities = capabilities,
+                filetypes = {
+                    "css",
+                    "scss",
+                    "sass",
+                    "postcss",
+                    "html",
+                    "javascript",
+                    "javascriptreact",
+                    "typescript",
+                    "typescriptreact",
+                    "svelte",
+                    "vue",
+                    "rust",
+                    "rs",
+                },
+                init_options = {
+                    userLanguages = {
+                        rust = "html",
+                    },
+                },
+            })
+            require("lspconfig").ts_ls.setup({
+                capabilities = capabilities,
+                single_file_support = false,
+                on_init = function(client)
+                    client.server_capabilities.documentFormattingProvider = false
+                    client.server_capabilities.documentFormattingRangeProvider = false
+                end,
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                    vim.api.nvim_set_keymap('n', '<space>xp', '', {
+                        noremap = true,
+                        callback = function()
+                            for _, lsp_client in ipairs(vim.lsp.get_clients()) do
+                                require("workspace-diagnostics").populate_workspace_diagnostics(lsp_client, 0)
+                            end
+                        end
+                    })
+                end,
+                init_options = {
+                    hostInfo = "neovim",
+                    preferences = {
+                        includeCompletionsForModuleExports = true,
+                        includeCompletionsForImportStatements = true,
+                        importModuleSpecifierPreference = "relative",
+                    },
+                },
+                settings = {
+                    typescript = {
+                        preferences = {
+                            importModuleSpecifierPreference = "relative",
+                            importModuleSpecifierEnding = "minimal", -- Or "js", "index" based on need
+                        },
+                    },
+                    javascript = {
+                        preferences = {
+                            importModuleSpecifierPreference = "relative",
+                            importModuleSpecifierEnding = "minimal",
+                        },
+                    },
+                },
+            })
+            require("lspconfig").eslint.setup({
+                settings = {
+                    -- helps eslint find the eslintrc when it's placed in a subfolder instead of the cwd root
+                    workingDirectory = { mode = "auto" },
+                },
+            })
+            -- vim.api.nvim_create_autocmd("BufWritePre", {
+            --     callback = function(event)
+            --         local client = vim.lsp.get_active_clients({ bufnr = event.buf, name = "eslint" })[1]
+            --         if client then
+            --             local diag = vim.diagnostic.get(
+            --                 event.buf,
+            --                 { namespace = vim.lsp.diagnostic.get_namespace(client.id) }
+            --             )
+            --             if #diag > 0 then
+            --                 vim.cmd("EslintFixAll")
+            --             end
+            --         end
+            --     end,
+            -- })
+            vim.filetype.add({ extension = { typ = "typst" } })
+            require("lspconfig").tinymist.setup({
+                capabilities = capabilities,
+                offset_encoding = "utf-8",
+                settings = {},
+                on_attach = function(client, bufnr)
+                    require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
+                end,
+            })
+            --     require("lspconfig").biome.setup({
+            --         capabilities = capabilities,
+            --         settings = {},
+            --     })
+            --     require("lspconfig").pylsp.setup({
+            --         capabilities = capabilities,
+            --         settings = {
+            --             pylsp = {
+            --                 plugins = {
+            --                     -- Disable other linters/formatters as I use ruff for these
+            --                     pycodestyle = { enabled = false },
+            --                     mccabe = { enabled = false },
+            --                     pyflakes = { enabled = false },
+            --                     flake8 = { enabled = false },
+            --                     autopep8 = { enabled = false },
+            --                     yapf = { enabled = false },
+            --
+            --                     -- Enable rope
+            --                     rope_completion = { enabled = false },
+            --                     rope_autoimport = { enabled = false },
+            --                     rope = {
+            --                         enabled = false,
+            --                         -- extract_method = { enabled = true },
+            --                         -- extract_variable = { enabled = true },
+            --                         -- inline = { enabled = true },
+            --                         -- move = { enabled = true },
+            --                     },
+            --
+            --                     -- Enable Jedi
+            --                     jedi_completion = { enabled = true },
+            --                     jedi_hover = { enabled = true },
+            --                     jedi_references = { enabled = true },
+            --                     jedi_signature_help = { enabled = true },
+            --                     jedi_symbols = { enabled = true },
+            --                 }
+            --             }
+            --
+            --         },
+            --         on_init = function(client)
+            --             client.server_capabilities.documentFormattingProvider = false
+            --             client.server_capabilities.documentFormattingRangeProvider = false
+            --         end,
+            --     })
         end,
     }, -- formatters
     {
@@ -283,7 +530,7 @@ return {
                 -- }),
 
                 -- code action
-                require("typescript.extensions.null-ls.code-actions"),
+                -- require("typescript.extensions.null-ls.code-actions"),
                 nls.builtins.code_actions.gitsigns,
                 nls.builtins.code_actions.refactoring,
                 -- diagnostics
@@ -356,9 +603,7 @@ return {
             end
 
             opts.condition = function(utils)
-                return utils.root_has_file(".null-ls-root")
-                    and not utils.root_has_file("pom.xml")
-                    and vim.bo.filetype ~= "java"
+                return not utils.root_has_file("pom.xml") and vim.bo.filetype ~= "java"
             end
             return opts
         end,
@@ -409,7 +654,8 @@ return {
                 "force",
                 {},
                 vim.lsp.protocol.make_client_capabilities(),
-                cmp_lsp.default_capabilities()
+                cmp_lsp.default_capabilities(),
+                require('lsp-file-operations').default_capabilities()
             )
 
             require("mason-null-ls").setup({
@@ -430,6 +676,7 @@ return {
                 },
             })
             require("mason-lspconfig").setup({
+                automatic_enable = false,
                 automatic_installation = true,
                 ensure_installed = {
                     -- https://github.com/williamboman/mason-lspconfig.nvim/blob/main/doc/server-mapping.md
@@ -452,210 +699,7 @@ return {
                     "tinymist",
                     "yamlls",
                     "openscad_lsp",
-                },
-                handlers = {
-                    function(server_name) -- default handler (optional)
-                        if server_name ~= "jdtls" then
-                            require("lspconfig")[server_name].setup({
-                                capabilities = capabilities,
-                            })
-                        end
-                    end,
-
-                    angularls = function()
-                        require("lspconfig").angularls.setup({
-                            capabilities = capabilities,
-                            settings = {},
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                            end,
-                        })
-                    end,
-                    sqlls = function()
-                        require("lspconfig").sqlls.setup(require("raven.plugins.lsp-opts.sqlls"))
-                    end,
-                    lua_ls = function()
-                        require("lspconfig").lua_ls.setup({
-                            capabilities = capabilities,
-                            settings = {},
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                            end,
-                        })
-                    end,
-                    bashls = function()
-                        require("lspconfig").bashls.setup({
-                            filetypes = { "sh", "zsh" },
-                        })
-                    end,
-                    yamlls = function()
-                        require("lspconfig").yamlls.setup(require("raven.plugins.lsp-opts.yamlls"))
-                    end,
-                    jsonls = function()
-                        require("lspconfig").jsonls.setup(require("raven.plugins.lsp-opts.jsonls"))
-                    end,
-                    -- biome = function()
-                    --     require("lspconfig").biome.setup({
-                    --         capabilities = capabilities,
-                    --         settings = {},
-                    --     })
-                    -- end,
-                    -- pylsp = function()
-                    --     require("lspconfig").pylsp.setup({
-                    --         capabilities = capabilities,
-                    --         settings = {
-                    --             pylsp = {
-                    --                 plugins = {
-                    --                     -- Disable other linters/formatters as I use ruff for these
-                    --                     pycodestyle = { enabled = false },
-                    --                     mccabe = { enabled = false },
-                    --                     pyflakes = { enabled = false },
-                    --                     flake8 = { enabled = false },
-                    --                     autopep8 = { enabled = false },
-                    --                     yapf = { enabled = false },
-                    --
-                    --                     -- Enable rope
-                    --                     rope_completion = { enabled = false },
-                    --                     rope_autoimport = { enabled = false },
-                    --                     rope = {
-                    --                         enabled = false,
-                    --                         -- extract_method = { enabled = true },
-                    --                         -- extract_variable = { enabled = true },
-                    --                         -- inline = { enabled = true },
-                    --                         -- move = { enabled = true },
-                    --                     },
-                    --
-                    --                     -- Enable Jedi
-                    --                     jedi_completion = { enabled = true },
-                    --                     jedi_hover = { enabled = true },
-                    --                     jedi_references = { enabled = true },
-                    --                     jedi_signature_help = { enabled = true },
-                    --                     jedi_symbols = { enabled = true },
-                    --                 }
-                    --             }
-                    --
-                    --         },
-                    --         on_init = function(client)
-                    --             client.server_capabilities.documentFormattingProvider = false
-                    --             client.server_capabilities.documentFormattingRangeProvider = false
-                    --         end,
-                    --     })
-                    -- end,
-                    basedpyright = function()
-                        require("lspconfig").basedpyright.setup({
-                            capabilities = capabilities,
-                            settings = {},
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                            end,
-                        })
-                    end,
-                    pylyzer = function()
-                        require("lspconfig").pylyzer.setup({
-                            cmd = { "pylyzer", "--server" },
-                            capabilities = capabilities,
-                            settings = {}
-                        })
-                    end,
-                    ruff = function()
-                        require("lspconfig").ruff.setup({
-                            capabilities = capabilities,
-                            settings = {
-                                ruff = {
-                                    lint = {
-                                        enable = true,
-                                    },
-                                    organizeImports = true,
-                                    fixAll = true,
-                                }
-                            },
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                                local function format_and_organize()
-                                    -- local params = {
-                                    --     command = "ruff.applyOrganizeImports",
-                                    --     arguments = {
-                                    --         {
-                                    --             uri = vim.uri_from_bufnr(0),
-                                    --             version = vim.b[bufnr].changedtick,
-                                    --         }
-                                    --     }
-                                    -- }
-                                    -- vim.lsp.buf.execute_command(params)
-                                    vim.lsp.buf.format({ async = false, timeout_ms = 100 })
-                                end
-                                vim.keymap.set('n', '<leader>cf', format_and_organize, {
-                                    buffer = bufnr,
-                                    desc = 'Format'
-                                })
-                            end
-                        })
-                    end,
-                    tailwindcss = function()
-                        require("lspconfig").tailwindcss.setup({
-                            capabilities = capabilities,
-                            filetypes = {
-                                "css",
-                                "scss",
-                                "sass",
-                                "postcss",
-                                "html",
-                                "javascript",
-                                "javascriptreact",
-                                "typescript",
-                                "typescriptreact",
-                                "svelte",
-                                "vue",
-                                "rust",
-                                "rs",
-                            },
-                            init_options = {
-                                userLanguages = {
-                                    rust = "html",
-                                },
-                            },
-                        })
-                    end,
-                    ts_ls = function()
-                        require("lspconfig").ts_ls.setup({
-                            single_file_support = false,
-                            on_init = function(client)
-                                client.server_capabilities.documentFormattingProvider = false
-                                client.server_capabilities.documentFormattingRangeProvider = false
-                            end,
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                            end,
-                        })
-                    end,
-                    eslint = function()
-                        vim.api.nvim_create_autocmd("BufWritePre", {
-                            callback = function(event)
-                                local client = vim.lsp.get_active_clients({ bufnr = event.buf, name = "eslint" })[1]
-                                if client then
-                                    local diag = vim.diagnostic.get(
-                                        event.buf,
-                                        { namespace = vim.lsp.diagnostic.get_namespace(client.id) }
-                                    )
-                                    if #diag > 0 then
-                                        vim.cmd("EslintFixAll")
-                                    end
-                                end
-                            end,
-                        })
-                    end,
-                    tinymist = function()
-                        vim.filetype.add({ extension = { typ = "typst" } })
-                        require("lspconfig").tinymist.setup({
-                            capabilities = capabilities,
-                            offset_encoding = "utf-8",
-                            settings = {},
-                            on_attach = function(client, bufnr)
-                                require("workspace-diagnostics").populate_workspace_diagnostics(client, bufnr)
-                            end,
-                        })
-                    end,
-                },
+                }
             })
         end,
     },
@@ -667,21 +711,22 @@ return {
         },
         ft = { "java" },
         keys = {
-            { "<leader>cC",  function() require("jdtls").compile() end,                         desc = "Compile" },
-            { "<leader>cx",  desc = "+extract" },
-            { "<leader>cxv", function() require("jdtls").extract_variable_all() end,            desc = "Extract Variable" },
-            { "<leader>cxc", function() require("jdtls").extract_constant() end,                desc = "Extract Constant" },
-            { "gs",          function() require("jdtls").super_implementation() end,            desc = "Goto Super" },
-            { "gS",          function() require("jdtls.tests").goto_subjects() end,             desc = "Goto Subjects" },
-            { "<leader>co",  function() require("jdtls").organize_imports() end,                desc = "Organize Imports" },
+            { "<leader>cC",  ft = { "java" }, function() require("jdtls").compile() end,                       desc = "Compile" },
+            { "<leader>cx",  ft = { "java" }, desc = "+extract" },
+            { "<leader>cxv", ft = { "java" }, function() require("jdtls").extract_variable_all() end,          desc = "Extract Variable" },
+            { "<leader>cxc", ft = { "java" }, function() require("jdtls").extract_constant() end,              desc = "Extract Constant" },
+            { "gs",          ft = { "java" }, function() require("jdtls").super_implementation() end,          desc = "Goto Super" },
+            { "gS",          ft = { "java" }, function() require("jdtls.tests").goto_subjects() end,           desc = "Goto Subjects" },
+            { "<leader>co",  ft = { "java" }, function() require("jdtls").organize_imports() end,              desc = "Organize Imports" },
             -- Visual mode mappings
-            { "<leader>cxm", [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]],       desc = "Extract Method",   mode = "v" },
-            { "<leader>cxv", [[<ESC><CMD>lua require('jdtls').extract_variable_all(true)<CR>]], desc = "Extract Variable", mode = "v" },
-            { "<leader>cxc", [[<ESC><CMD>lua require('jdtls').extract_constant(true)<CR>]],     desc = "Extract Constant", mode = "v" },
+            { "<leader>cxm", ft = { "java" }, [[<ESC><CMD>lua require('jdtls').extract_method(true)<CR>]],     desc = "Extract Method",   mode = "v" },
+            { "<leader>cxv", ft = { "java" }, [[<ESC><CMD>lua require('jdtls').extract_variable_all(true)<CR>]], desc = "Extract Variable", mode = "v" },
+            { "<leader>cxc", ft = { "java" }, [[<ESC><CMD>lua require('jdtls').extract_constant(true)<CR>]],   desc = "Extract Constant", mode = "v" },
             -- Test mappings
             { "<leader>t",   desc = "+test" },
             {
                 "<leader>tt",
+                ft = { "java" },
                 function()
                     require("jdtls.dap").test_class()
                 end,
@@ -689,12 +734,13 @@ return {
             },
             {
                 "<leader>tr",
+                ft = { "java" },
                 function()
                     require("jdtls.dap").test_nearest_method()
                 end,
                 desc = "Run Nearest Test"
             },
-            { "<leader>tT", function() require("jdtls.dap").pick_test() end, desc = "Run Test" },
+            { "<leader>tT", ft = { "java" }, function() require("jdtls.dap").pick_test() end, desc = "Run Test" },
         },
     },
 }

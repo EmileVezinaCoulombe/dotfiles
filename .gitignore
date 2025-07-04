@@ -1,5 +1,8 @@
 *.uuid
 
+*secrets
+*session
+
 # nvim
 nvim/.config/nvim/plugin/packer_compiled.lua
 zsh/.config/zsh/.zsh_history
@@ -10,3 +13,4 @@ nixos/hardware-configuration.nix
 config/.config/zsh/.zcompdump
 config/.config/zsh/.zsh_history
 config/.config/gh/hosts.yml
+.DS_Store

@@ -36,6 +36,26 @@ function M.get_root()
     return cwd
 end
 
+---@return string | nil
+function M.get_project_name()
+    local dir = M.get_root()
+
+    if dir == nil or dir == "" then
+        return nil
+    end
+
+    local sections = {}
+    for section in string.gmatch(dir, "([^/]+)") do
+        table.insert(sections, section)
+    end
+
+    if #sections == 0 then
+        return nil
+    end
+
+    return sections[#sections]
+end
+
 ---@return string
 function M.reduce_path_to_root_patern(path)
     local dir = path and vim.fs.dirname(path) or vim.loop.cwd()

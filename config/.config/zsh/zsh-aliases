@@ -156,10 +156,12 @@ alias g='git'
 alias ga='git fza'
 alias gaa='git add --all'
 alias gap='git add -p'
+alias gapf='git add -p $(git diff --name-only | fzf --multi --preview "git diff --color=always {1}")'
+alias garf='git restore --staged  $(git diff --name-only --cached | fzf --multi --preview "git diff --cached --color=always {1}")'
+alias gara='git restore --staged  $(git diff --name-only --cached)'
 
 # Commit
 alias gcr='git commit --amend'
-# Commit
 alias gc='git cc'                        # Interactive conventional commit
 alias gcf='git commit --amend --no-edit' # Fix last commit
 alias gfu='git fixup'                    # Interactive fixup
@@ -176,9 +178,6 @@ alias gf='git fetch origin'
 
 # Stash
 alias gs='git stash'
-alias gsp='git stash pop'
-# Stash operations
-alias gs='git stash'       # Stash changes
 alias gsp='git spi'        # Interactive stash pop with preview
 alias gsa='git sai'        # Interactive stash apply with preview
 alias gsd='git sdi'        # Interactive stash drop with preview
@@ -237,14 +236,6 @@ alias gpsu='git push -u origin'         # Push and set upstream
 alias gpf='git push --force-with-lease' # Safe force push
 
 # Log
-alias gl='git log --oneline'
-alias glg='git plog1'
-alias glga='git plog1 --all'
-alias glg2='git plog2'
-alias glga2='git plog2 --all'
-alias glg3='git plog3'
-alias glga3='git plog3 --all'
-# Log operations
 alias gl='git plog1'         # Simple log
 alias gla='git plog1 --all'  # Simple log (all branches)
 alias gl2='git plog2'        # Detailed log

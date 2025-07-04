@@ -14,6 +14,7 @@
 export ZDOTDIR=$HOME/.config/zsh
 export ZALIASES="$ZDOTDIR/zsh-aliases"
 export ZFUNCTIONS="$ZDOTDIR/zsh-functions"
+export ZSECRETS="$ZDOTDIR/.secrets"
 
 ################################################################################
 # Default programs
@@ -33,3 +34,4 @@ export GITHUB_EMAIL=emilevezinacoulombe@icloud.com
 ################################################################################
 # Software
 export PYENV_ROOT="$HOME/.pyenv"
+. "$HOME/.cargo/env"

@@ -12,6 +12,7 @@ return {
             "antoinemadec/FixCursorHold.nvim",
             "nvim-treesitter/nvim-treesitter",
             "nvim-neotest/neotest-python",
+            "MisanthropicBit/neotest-jest", -- "nvim-neotest/neotest-jest", https://github.com/nvim-neotest/neotest-jest/pull/111
         },
         config = function(_, _)
             require("neotest").setup({
@@ -21,7 +22,7 @@ return {
                 -- The adapter will then be automatically loaded with the config.
                 adapters = {
                     require("rustaceanvim.neotest")({}),
-                    ["neotest-python"] = {
+                    require("neotest-python")({
                         dap = { justMyCode = false },
                         runner = "unittest",
                         python = function()
@@ -32,9 +33,20 @@ return {
                             return path
                         end,
 
-                    },
-
-
+                    }
+                    ),
+                    require("neotest-jest")({
+                        jestCommand = "npm test --",
+                        jestConfigFile = "jest.config.mjs",
+                        dap = {
+                            justMyCode = false,
+                            -- dap_config_name = "Debug Jest Tests",
+                        },
+                        env = { CI = true },
+                        cwd = function()
+                            return vim.fn.getcwd()
+                        end,
+                    }),
                 },
                 status = { virtual_text = true },
                 output = { open_on_run = true },
@@ -107,7 +119,7 @@ return {
         dependencies = {
             {
                 "williamboman/mason.nvim",
-                opts = { ensure_installed = { "java-debug-adapter", "java-test" } },
+                opts = { ensure_installed = { "java-debug-adapter", "java-test", "js-debug-adapter" } },
             },
             {
                 "mfussenegger/nvim-dap-python",
@@ -179,7 +191,7 @@ return {
             },
             {
                 "jay-babu/mason-nvim-dap.nvim",
-                dependencies = { { "mason.nvim" } },
+                dependencies = { { "williamboman/mason.nvim" } },
                 cmd = { "DapInstall", "DapUninstall" },
                 opts = {
                     automatic_installation = true,
@@ -187,17 +199,25 @@ return {
                     handlers = {},
                     ensure_installed = {
                         "python",
+                        "codelldb",
+                        "js-debug-adapter",
                     },
                 },
+                config = function(_, opts)
+                    require("mason-nvim-dap").setup(opts)
+                end,
             },
         },
         config = function()
             local dap = require('dap')
+
             dap.defaults.fallback.pythonPath = require("raven.utils").venv_python_path()
+
+            local mason_path = vim.fn.stdpath("data") .. "/mason"
 
             dap.adapters.lldb = {
                 type = "executable",
-                command = "/home/emile/.local/share/nvim/mason/packages/codelldb/codelldb",
+                command = mason_path .. "/packages/codelldb/codelldb",
                 name = "codelldb",
             }
 
@@ -260,6 +280,76 @@ return {
                     vmArgs    = "" .. "-Xmx2g"
                 }
             }
+
+            if not dap.adapters["pwa-node"] then
+                require("dap").adapters["pwa-node"] = {
+                    type = "server",
+                    host = "localhost",
+                    port = "${port}",
+                    executable = {
+                        command = "node",
+                        args = { mason_path .. "/packages/js-debug-adapter/js-debug/src/dapDebugServer.js", "${port}" },
+                    },
+                }
+            end
+            if not dap.adapters["node"] then
+                dap.adapters["node"] = function(cb, config)
+                    if config.type == "node" then
+                        config.type = "pwa-node"
+                    end
+                    local nativeAdapter = dap.adapters["pwa-node"]
+                    if type(nativeAdapter) == "function" then
+                        nativeAdapter(cb, config)
+                    else
+                        cb(nativeAdapter)
+                    end
+                end
+            end
+
+            local js_filetypes = { "typescript", "javascript" }
+
+            local vscode = require("dap.ext.vscode")
+            vscode.type_to_filetypes["node"] = js_filetypes
+            vscode.type_to_filetypes["pwa-node"] = js_filetypes
+
+            dap.configurations.typescript = {
+                {
+                    name = "Debug (npm run start:dev)",
+                    type = "pwa-node",
+                    request = "launch",
+                    cwd = "${workspaceFolder}",
+                    runtimeExecutable = "npx",
+                    runtimeArgs = { "tsx", "watch", "--env-file=.env", "src/main.ts", },
+                    console = "integratedTerminal",
+                },
+                {
+                    type = "pwa-node",
+                    request = "launch",
+                    name = "Launch file",
+                    program = "${file}",
+                    cwd = "${workspaceFolder}",
+                    console = "integratedTerminal",
+                },
+                {
+                    type = "pwa-node",
+                    request = "attach",
+                    name = "Attach",
+                    processId = require("dap.utils").pick_process,
+                    cwd = "${workspaceFolder}",
+                    console = "integratedTerminal",
+                },
+                {
+                    name = "Debug Tests (current file)",
+                    type = "pwa-node",
+                    request = "launch",
+                    cwd = "${workspaceFolder}",
+                    runtimeExecutable = "npx",
+                    runtimeArgs = { "jest", "${file}", "--runInBand", "--no-cache", "--watchAll=false", },
+                    console = "integratedTerminal",
+                },
+            }
+
+            dap.configurations.javascript = dap.configurations.typescript
         end,
         keys = {
             {

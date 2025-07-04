@@ -23,6 +23,7 @@ local M = {
 
     spec = {
         { import = "raven.plugins" },
+        { import = "raven.plugins.custom" },
         { import = "raven.plugins.coding" },
         { import = "raven.plugins.misc" },
         { import = "raven.plugins.test" },
