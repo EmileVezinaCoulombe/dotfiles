@@ -41,7 +41,8 @@ return {
         version = false, -- Never set this value to "*"! Never!
         opts = {
             mode = "agentic",
-            provider = 'ollama',
+            provider = 'copilot',
+            -- provider = 'ollama',
             providers = {
                 copilot = {
                     -- model = "claude-sonnet-4"

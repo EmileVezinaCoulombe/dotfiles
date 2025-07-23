@@ -1,3 +1,5 @@
-# Raven
+# Raven Config
 
-Inspired and derived from LazyVim, with my own twist.
+https://github.com/Saghen/blink.cmp
+https://github.com/nvimdev/lspsaga.nvim
+https://neovimcraft.com/plugin/ray-x/navigator.lua/
