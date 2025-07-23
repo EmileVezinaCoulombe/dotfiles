@@ -33,48 +33,48 @@ alias tmp='vim ~/tmp.txt'
 
 # Extra
 function catfiles() {
-    local output_file="tmp.txt"
-    local file_pattern="*"
-    local exclude_pattern="*/venv/*"
+  local output_file="tmp.txt"
+  local file_pattern="*"
+  local exclude_pattern="*/venv/*"
 
-    # Parse named arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-        --ext | --extension | -e)
-            file_pattern="*.$2"
-            shift 2
-            ;;
-        --output | -o)
-            output_file="$2"
-            shift 2
-            ;;
-        --exclude | -x)
-            exclude_pattern="$2"
-            shift 2
-            ;;
-        --help | -h)
-            echo "Usage: catfiles [options]"
-            echo "Options:"
-            echo "  --ext, -e      File extension (without dot, e.g., 'py' for Python files)"
-            echo "  --output, -o   Output file (default: tmp.txt)"
-            echo "  --exclude, -x  Exclude pattern (default: */venv/*)"
-            echo "  --help, -h     Show this help message"
-            return 0
-            ;;
-        *)
-            echo "Unknown option: $1"
-            return 1
-            ;;
-        esac
-    done
+  # Parse named arguments
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    --ext | --extension | -e)
+      file_pattern="*.$2"
+      shift 2
+      ;;
+    --output | -o)
+      output_file="$2"
+      shift 2
+      ;;
+    --exclude | -x)
+      exclude_pattern="$2"
+      shift 2
+      ;;
+    --help | -h)
+      echo "Usage: catfiles [options]"
+      echo "Options:"
+      echo "  --ext, -e      File extension (without dot, e.g., 'py' for Python files)"
+      echo "  --output, -o   Output file (default: tmp.txt)"
+      echo "  --exclude, -x  Exclude pattern (default: */venv/*)"
+      echo "  --help, -h     Show this help message"
+      return 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      return 1
+      ;;
+    esac
+  done
 
-    # Execute the find command with the specified parameters
-    find . -name "$file_pattern" -type f -not -path "$exclude_pattern" -exec sh -c '
+  # Execute the find command with the specified parameters
+  find . -name "$file_pattern" -type f -not -path "$exclude_pattern" -exec sh -c '
         echo "\n=== $1 ==="
         cat "$1"
     ' sh {} \; >"$output_file"
 
-    echo "Files concatenated to $output_file"
+  echo "Files concatenated to $output_file"
 }
 
 ################################################################################
@@ -85,7 +85,7 @@ alias vim='nvim'
 alias emacs="emacsclient -c -a 'emacs'"
 alias cat='bat'
 alias grep='ripgrep'
-alias ls='exa'
+alias ls='eza'
 alias du='dust'
 alias top='btm'
 alias fd='fdfind'
@@ -170,18 +170,33 @@ alias gfu='git fixup'                    # Interactive fixup
 alias gd='git diff'
 
 # Checkout
-alias gck='git checkout'
-alias gcb='git checkout -b'
+alias gck='git checkout'           # Interactive checkout with preview
+alias gcki='git cb'           # Interactive checkout with preview
+alias gckb='git checkout -b' # Create and checkout new branch
+function gckf() {
+  # Interactive checkout HEAD for file
+  # Checkout file from both staged and unstaged changes
+  file_selected=$(git diff HEAD --name-only | fzf --multi --preview "git diff HEAD --color=always {}")
+    # Replace newlines file name for file name enclosed in quotes and separated by spaces
+    file_selected=$(echo "$file_selected" | tr '\n' ' ' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+  if [ -z "$file_selected" ]; then
+    echo "No file selected"
+  else
+    echo "git checkout HEAD -- $file_selected"
+    eval "git checkout HEAD -- $file_selected"
+  fi
+}
 
 # Fetch
-alias gf='git fetch origin'
+alias gf='git fetch --all -p' # Fetch all and prune
 
 # Stash
-alias gs='git stash'
-alias gsp='git spi'        # Interactive stash pop with preview
-alias gsa='git sai'        # Interactive stash apply with preview
-alias gsd='git sdi'        # Interactive stash drop with preview
-alias gsl='git stash list' # List stashes
+alias gshs='git stash push --staged'         # Stash staged changes
+alias gshp='git spi'                        # Interactive stash pop with preview
+alias gsha='git sai'                        # Interactive stash apply with preview
+alias gshd='git sdi'                        # Interactive stash drop with preview
+alias gshl='git stash list --date=relative' # List stashes
 
 # Rebase
 alias gr='git rebase -i'
@@ -199,7 +214,7 @@ alias grh='git reset --hard'
 alias gm='git merge'
 
 # Pull
-alias gpl='git pull'
+alias gpl='git pull' # Pull
 
 # Tag
 alias gt='git tag'
@@ -209,31 +224,28 @@ alias gw='git worktree'
 
 # Push
 alias gps='git push'
-alias gpsu='git push -u origin' # Push and set upstream
+alias gpsu='git push --set-upstream origin $(git branch --show-current)' # Push and set upstream
 alias gpf='git push --force-with-lease'
+alias gpf='git push --force-with-lease' # Safe force push
 
-# Branch
-alias gb='git branch'
-alias gbd='git branch -d'
-alias gbD='git branch -D'
-alias gbl='git branch -a'
 # Branch operations
-alias gb='git branch'       # List branches
-alias gbl='git branch -a'   # List all branches
-alias gbd='git branch -d'   # Delete branch
-alias gbD='git branch -D'   # Force delete branch
-alias gco='git cb'          # Interactive checkout with preview
-alias gcb='git checkout -b' # Create and checkout new branch
+alias gb='git branch'     # List branches
+alias gbl='git branch -a' # List all branches
+function gbm() {
+  if [ -z "$1" ]; then
+    echo "Usage: gbm <new-branch-name>"
+    return 1
+  else
+    git branch -m "$(git branch --show-current)" "$1" && git push --set-upstream origin "$1" # Rename branch
+  fi
+}
+
+alias gbd='git branch -d' # Delete branch
+alias gbD='git branch -D' # Force delete branch
 
 # Remote
 alias grem='git remote'
 alias gremv='git remote -v'
-# Remote operations
-alias gf='git fetch --all -p'           # Fetch all and prune
-alias gpl='git pull'                    # Pull
-alias gps='git push'                    # Push
-alias gpsu='git push -u origin'         # Push and set upstream
-alias gpf='git push --force-with-lease' # Safe force push
 
 # Log
 alias gl='git plog1'         # Simple log
@@ -244,11 +256,8 @@ alias gl3='git plog3'        # Full log
 alias gl3a='git plog3 --all' # Full log (all branches)
 alias glf='git flog'         # Interactive log with preview
 
-# Status
-alias gs='git status'
-alias gss='git status -s'
 # Status and diff
-alias gst='git status'        # Full status
+alias gs='git status'        # Full status
 alias gss='git status -s'     # Short status
 alias gd='git diff'           # Show diff
 alias gds='git diff --staged' # Show staged diff
@@ -407,7 +416,7 @@ alias vdir='vdir --color=auto'
 alias sudo='sudo '
 # Redo last command as sudo
 redo() {
-    "$(fc -ln -1)" | sudo -k
+  "$(fc -ln -1)" | sudo -k
 }
 alias S='redo'
 
