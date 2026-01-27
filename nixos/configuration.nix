@@ -4,13 +4,22 @@
 
 { config, pkgs, ... }:
 
+let
+  unstableTarball =
+    fetchTarball
+      https://github.com/NixOS/nixpkgs/archive/nixos-unstable.tar.gz;
+in
 {
+  # man configuration.nix or on https://nixos.org/nixos/options.html.
+  system.stateVersion = "24.11";
+
   imports =
     [
       ./hardware-configuration.nix
     ];
 
-  # Turn on flag for proprietary software
+  ################################################################################
+  # Nix
   nix = {
     nixPath = [
       "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
@@ -18,56 +27,120 @@
       "/nix/var/nix/profiles/per-user/root/channels"
       "/home/emile/.dotfiles/nixos/"
     ];
+    settings = {
+      experimental-features = ["nix-command" "flakes"];
+      auto-optimise-store = true;
+      substituters = [
+        "https://cache.nixos.org"
+        "https://nix-community.cachix.org/"
+      ];
+      trusted-public-keys = [
+        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      ];
+    };
+    gc = {
+      automatic = true;
+      dates = "daily";
+      options = "--delete-older-than 15d";
+    };
   };
 
-  # Enable Copy past for boxes vm
-  virtualisation.libvirtd.enable = true;
-  programs.dconf.enable = true;
+  ################################################################################
+  # Bootloader
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+  };
 
-  # services.spice-vdagentd.enable = true;
+  ################################################################################
+  # Network
+  networking = {
+    hostName = "emile-nixos";
+    networkmanager.enable = true;
+  };
 
-  # Warning unstable features
-  nix.settings.experimental-features = ["nix-command" "flakes"];
-
-  # Bootloader.
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
-  # Configure network proxy if necessary
+  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
   # networking.proxy.default = "http://user:password@proxy:port/";
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
-  networking.hostName = "emile-nixos"; # Define your hostname.
-  networking.networkmanager.enable = true; # Enable networking
-  # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
+  # networking.firewall.allowedTCPPorts = [ ... ];
+  # networking.firewall.allowedUDPPorts = [ ... ];
+  # Or disable the firewall altogether.
+  # networking.firewall.enable = false;
 
-  # Set your time zone.
+  ################################################################################
+  # System Location & Internalization
   time.timeZone = "America/Toronto";
 
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-
-  # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
-  services.xserver.desktopManager.gnome.enable = true;
-
-  # Configure keymap in X11
-  services.xserver = {
-    layout = "fr";
-    xkbVariant = "us";
-  };
-
-  # Configure console keymap
   console.keyMap = "fr";
 
-  # Select internationalisation properties.
-  i18n.defaultLocale = "en_CA.UTF-8";
+  i18n = {
+    defaultLocale = "en_CA.UTF-8";
+    extraLocaleSettings = {
+      LC_ADDRESS = "en_US.UTF-8";
+      LC_IDENTIFICATION = "en_US.UTF-8";
+      LC_MEASUREMENT = "en_US.UTF-8";
+      LC_MONETARY = "en_US.UTF-8";
+      LC_NAME = "en_US.UTF-8";
+      LC_NUMERIC = "en_US.UTF-8";
+      LC_PAPER = "en_US.UTF-8";
+      LC_TELEPHONE = "en_US.UTF-8";
+      LC_TIME = "en_US.UTF-8";
+    };
+  };
 
-  # Enable CUPS to print documents.
+  ################################################################################
+  # Desktop Environment
+
+  services.desktopManager.cosmic.enable = true;
+  services.displayManager = {
+    cosmic-greeter.enable = true;
+    # autoLogin = {
+    #   enable = true;
+    #   user = "emile";
+    # };
+  };
+  services.system76-scheduler.enable = true;
+  environment.sessionVariables = {
+    COSMIC_DATA_CONTROL_ENABLED = "1"; # Disable Wayland window clipboard boundary security feature
+    NIXOS_OZONE_WL = "1";
+    MOZ_ENABLE_WAYLAND = "1";
+    GBM_BACKEND = "nvidia-drm";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+    WLR_NO_HARDWARE_CURSORS = "1";
+  };
+
+  programs.firefox = {
+    enable = true;
+    preferences = {
+      # disable libadwaita theming for Firefox
+      "widget.gtk.libadwaita-colors.enabled" = false;
+    };
+  };
+
+  ################################################################################
+  # Keymaps
+  services.xserver = {
+    xkb = {
+      layout = "fr";
+      variant = "us";
+    };
+  };
+
+  ################################################################################
+  # Services
+
+  # Printer
   services.printing.enable = true;
 
-  # Enable sound with pipewire.
-  sound.enable = true;
+  # Touchpad
+  services.libinput.enable = true;
+
+  #  SSH
+  services.openssh.enable = true;
+
+  # Sound
   hardware.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
@@ -76,130 +149,33 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
     #media-session.enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  services.xserver.libinput.enable = true;
-
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.emile = {
-    isNormalUser = true;
-    description = "emile";
-    extraGroups = [ "networkmanager" "wheel" ];
-
-    shell = pkgs.zsh;
-    packages = with pkgs; [
-      bat
-      btop
-      clang
-      cmake
-      exa
-      fd
-      firefox
-      fzf
-      gcc
-      gh
-      git
-      gnumake
-      go
-      kitty
-      lazygit
-      lua
-      luajitPackages.luarocks
-      micro
-      neofetch
-      neovim
-      nnn
-      nodejs_20
-      php
-      python3
-      virt-manager
-      ripgrep
-      rustup
-      spice
-      spice-vdagent
-      starship # zsh
-      stow
-      tmux
-      unzip
-      zplug
-      zsh
-      # nix-zsh-completions
-      # zsh-autosuggestions
-      # zsh-autocomplete
-      # zsh-autopair
-      # zsh-completions
-      # zsh-forgit
-      # zsh-syntax-highlighting
-      # zsh-system-clipboard
-      # zsh-vi-mode
-      # zsh-you-should-use
-      # zsh-z
-      zulu # java
-    #  thunderbird
-    ];
-  };
-
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
-
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-  ];
-
-  # Some programs need SUID wrappers, can be configured further or are
-  programs.zsh.enable = true;
-  programs.fzf.fuzzyCompletion = true;
-  # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
-
-  # List services that you want to enable:
-
-  # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
-
-  # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
-  # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
-
-  # NVIDIA GPU
-  # Enable OpenGL
-  hardware.opengl = {
+  ################################################################################
+  # GPU
+  hardware.graphics = {
     enable = true;
-    driSupport = true;
-    driSupport32Bit = true;
+    enable32Bit = true;
   };
 
-  # Load nvidia driver for Xorg and Wayland
   services.xserver.videoDrivers = ["nvidia"];
 
   hardware.nvidia = {
-
     # Modesetting is required.
     modesetting.enable = true;
 
     # Nvidia power management. Experimental, and can cause sleep/suspend to fail.
-    powerManagement.enable = false;
+    powerManagement.enable = true;
     # Fine-grained power management. Turns off GPU when not in use.
     # Experimental and only works on modern Nvidia GPUs (Turing or newer).
     powerManagement.finegrained = false;
 
     # Use the NVidia open source kernel module (not to be confused with the
     # independent third-party "nouveau" open source driver).
-    # Support is limited to the Turing and later architectures. Full list of 
-    # supported GPUs is at: 
-    # https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus 
+    # Support is limited to the Turing and later architectures. Full list of
+    # supported GPUs is at:
+    # https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus
     # Only available from driver 515.43.04+
     # Currently alpha-quality/buggy, so false is currently the recommended setting.
     open = false;
@@ -212,7 +188,110 @@
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
 
-  # man configuration.nix or on https://nixos.org/nixos/options.html.
-  system.stateVersion = "23.05";
+  systemd.services = {
+    nvidia-suspend.enable = true;
+    nvidia-hibernate.enable = true;
+    nvidia-resume.enable = true;
+  };
 
+  boot.kernelParams = [
+    "nvidia-drm.modset=1"
+    "nvidia-drm.fbdev=1"
+  ];
+
+  ################################################################################
+  # System Packages
+  # Allow unfree packages
+  nixpkgs.config = {
+    allowUnfree = true;
+    packageOverrides = pkgs: {
+      unstable = import unstableTarball {
+        config = config.nixpkgs.config;
+      };
+    };
+  };
+
+  # List packages installed in system profile. To search, run:
+  # $ nix search wget
+  environment.systemPackages = with pkgs; [
+    wget
+    curl
+  ];
+
+  ################################################################################
+  # Programs
+
+  programs.zsh.enable = true;
+  programs.fzf.fuzzyCompletion = true;
+  # started in user sessions.
+  # programs.mtr.enable = true;
+  # programs.gnupg.agent = {
+  #   enable = true;
+  #   enableSSHSupport = true;
+  # };
+
+  ################################################################################
+  # User
+  # Don't forget to set a password with 'passwd'.
+  users.users.emile = {
+    isNormalUser = true;
+    description = "emile";
+    extraGroups = [ "networkmanager" "wheel" "video" ];
+
+    shell = pkgs.zsh;
+    packages = with pkgs; [
+      # !#########################################################################
+      # # To search a package:
+      # $ nix search wget
+      # %#########################################################################
+      # nix-zsh-completions
+      # zsh-autocomplete
+      # zsh-autopair
+      # zsh-autosuggestions
+      # zsh-completions
+      # zsh-forgit
+      # zsh-syntax-highlighting
+      # zsh-system-clipboard
+      # zsh-vi-mode
+      # zsh-you-should-use
+      # zsh-z
+      bat
+      btop
+      clang
+      cmake
+      dunst # Notifications
+      eza
+      fd
+      firefox
+      fzf
+      gcc
+      gh
+      ghostty
+      git
+      gnumake
+      go
+      lazygit
+      lua
+      luajitPackages.luarocks
+      micro
+      neofetch
+      neovim
+      nodejs_22
+      php
+      python3
+      ripgrep
+      rustup
+      starship # zsh
+      stow
+      tmux
+      unstable.orca-slicer
+      unzip
+      waybar # Hyperland
+      wofi # App launcher
+      yazi
+      zplug
+      zsh
+      zulu # java
+    ];
+  };
 }
